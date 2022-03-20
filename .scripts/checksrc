@@ -1,0 +1,6 @@
+#!/bin/bash
+
+for i in src/*.mo ; do
+    echo "$i"
+    $(vessel bin)/moc --check $(vessel sources) "$i"
+done

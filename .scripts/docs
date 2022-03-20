@@ -1,0 +1,3 @@
+#!/bin/bash
+
+$(vessel bin)/mo-doc --format=plain

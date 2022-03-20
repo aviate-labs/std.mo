@@ -1,0 +1,6 @@
+#!/bin/bash
+
+for i in test/*.test.mo ; do
+    echo "$i"
+    $(vessel bin)/moc -r $(vessel sources) "$i"
+done

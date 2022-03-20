@@ -1,0 +1,7 @@
+#!/bin/bash
+
+function test {
+    $(vessel bin)/moc -r $(vessel sources) "$1"
+}
+
+test "$@"
