@@ -11,7 +11,7 @@ module {
         var buckets : [var ?Entry<K, V>];
     };
 
-    /// Creates an empty Map
+    /// Creates an empty Map object.
     public func empty<K, V>(keyType : KeyType<K>) : Map<K, V> = {
         keyType;
         var count   = 0;

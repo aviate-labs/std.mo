@@ -33,8 +33,7 @@ suite.run([
             v == null;
         }),
         it("get 1 (a)", func (s : State) : Bool {
-            let v = Map.get(s.map, 1);
-            v == ?"a";
+            Map.get(s.map, 1) == ?"a";
         }),
         it("set 1 to \"b\"", func (s : State) : Bool {
             let v = Map.set(s.map, 1, "b");
@@ -42,28 +41,25 @@ suite.run([
             v == ?"a";
         }),
         it("get 1 (b)", func (s : State) : Bool {
-            let v = Map.get(s.map, 1);
-            v == ?"b";
+            Map.get(s.map, 1) == ?"b";
         }),
         it("delete 1", func (s : State) : Bool {
-            let v = Map.delete(s.map, 1);
-            v == ?"b";
+            Map.delete(s.map, 1) == ?"b";
         }),
         it("size 0", func (s : State) : Bool {
             Map.size(s.map) == 0;
         }),
-        it("rescale", func (_ : State) : Bool {
-            let map = Map.empty<Nat, Text>(keyType);
+        it("rescale", func (s : State) : Bool {
             for (k in Iterator.range(0, 99)) {
-                let v = Map.set(map, k, debug_show(k));
+                let v = Map.set(s.map, k, debug_show(k));
                 if (v != null) return false;
             };
-            for ((k, v) in Map.entries(map)) {
+            for ((k, v) in Map.entries(s.map)) {
                 if (v != debug_show(k)) return false;
             };
-            if (Map.size(map) != 100) return false;
+            if (Map.size(s.map) != 100) return false;
             // 16 -> 32 -> 64 -> 128
-            map.buckets.size() == 128;
+            s.map.buckets.size() == 128;
         })
     ])
 ]);
