@@ -9,9 +9,10 @@ values (either finite or infinite).
 An object is an iterator when it implements a next() method.
 - returns the value 'null' if the iterator has completed its sequence.
 
-## `class range`
+## Function `map`
+`func map<A, B>(i : Iterator<A>, f : A -> B) : Iterator<B>`
 
 
-### Function `next`
-`func next() : ?Nat`
+## Function `range`
+`func range(start : Nat, end : Nat) : Iterator<Nat>`
 

@@ -1,5 +1,9 @@
 # Array
 
+## Function `init`
+`func init<T>(capacity : Nat, default : T) : [T]`
+
+
 ## Function `at`
 `func at<T>(xs : [T], n : Int) : T`
 
