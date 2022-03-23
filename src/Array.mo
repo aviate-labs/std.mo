@@ -197,6 +197,12 @@ module {
         Array_tabulate<T>(xs.size(), func (i : Nat) { xs[i] });
     };
 
+    public func fromIterator<T>(i : Iterator.Iterator<T>) : [T] {
+        let b = Buffer.init<T>(16);
+        for (v in i) Buffer.add(b, v);
+        Buffer.toArray(b);
+    };
+
     private func negIndex(size : Nat, n : Int) : Nat {
         let m = abs(n);
         switch (n < 0) {

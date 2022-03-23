@@ -1,5 +1,7 @@
 import { Array_init; Array_tabulate } = "mo:⛔";
 
+import Iterator "Iterator";
+
 module Buffer {
     /// An extendable mutable buffer.
     /// - __capacity__ : The capacity of the buffer, is used to initialize if xs.size() == 0.
@@ -68,5 +70,15 @@ module Buffer {
     /// Extracts an array from the buffer.
     public func toArray<T>(b : Buffer<T>) : [T] {
         Array_tabulate<T>(b.size, func(i : Nat) : T { b.xs[i] });
+    };
+
+    public func values<T>(b : Buffer<T>) : Iterator.Iterator<T> = object {
+        var n = 0;
+        public func next() : ?T {
+            if (n == b.size) return null;
+            let x = ?b.xs[n];
+            n += 1;
+            x;
+        };
     };
 };
