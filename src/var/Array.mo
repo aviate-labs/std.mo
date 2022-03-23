@@ -1,9 +1,13 @@
-import { Array_init = init } = "mo:⛔";
+import { Array_init } = "mo:⛔";
 
 import Compare "../Compare";
 import Iterator "../Iterator";
 
 module {
+    public func init<T>(capacity : Nat, default : T) : [var T] {
+        Array_init(capacity, default);
+    };
+
     /// Sorts the elements of an array in place.
     public func sort<T>(xs : [var T], cf : Compare.Cf<T>) {
         // In-place quicksort w/ the Hoare partition scheme.

@@ -6,6 +6,10 @@ import Iterator "Iterator";
 import v "var/Array";
 
 module {
+    public func init<T>(capacity : Nat, default : T) : [T] {
+        fromVar(v.init<T>(capacity, default));
+    };
+
     /// Returns the array element at the given index. Negative integers count back from the last element.
     public func at<T>(xs : [T], n : Int) : T {
         xs[negIndex(xs.size(), n)];
