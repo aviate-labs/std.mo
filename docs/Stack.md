@@ -32,3 +32,7 @@ Adds the given value 'x' to the stack.
 `func toArray<T>(b : Stack<T>) : [T]`
 
 Extracts an array from the stack.
+
+## Function `values`
+`func values<T>(b : Stack<T>) : Iterator.Iterator<T>`
+

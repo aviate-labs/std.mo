@@ -13,29 +13,56 @@ func span(s : Nat, e : Nat) : AST.Span {
     AST.Span.new(start, end);
 };
 
-func checkFlags(r : Parser.Result<AST.Flags>, s : AST.Span, items : [AST.FlagsItem]) : Bool {
+func checkFlags(r : Parser.Result<AST.Flags>, expected : AST.Flags) : Bool {
     switch (r) {
         case (#err(_)) false;
-        case (#ok(flags)) {
-            if (flags.span.start.offset != s.start.offset or flags.span.end.offset != s.end.offset) return false;
-            if (flags.items.size() != items.size()) return false;
-            var k = 0;
-            for (i in items.vals()) {
-                if (flags.items[k].kind != items[k].kind) return false;
-                if (AST.Span.cf(flags.items[k].span, items[k].span) != 0) return false;
-                k += 1;
+        case (#ok(flags)) AST.Flags.cf(flags, expected) == 0;
+    };
+};
+
+func checkFlagsErr(r : Parser.Result<AST.Flags>, err : AST.Error) : Bool {
+    switch (r) {
+        case (#ok(_))  false;
+        case (#err(e)) AST.Error.cf(e, err) == 0;
+    };
+};
+
+func checkSetFlags(r : Parser.Result<Parser.Either<AST.SetFlags, AST.Group>>, flags : AST.SetFlags) : Bool {
+    switch (r) {
+        case (#err(_)) false;
+        case (#ok(e)) {
+            switch (e) {
+                case (#right(_)) false;
+                case (#left(sf)) AST.SetFlags.cf(sf, flags) == 0;
             };
-            true;
         };
     };
 };
 
-func checkFlagsErr(r : Parser.Result<AST.Flags>, s : AST.Span, kind : AST.ErrorKind) : Bool {
+func checkCaptureName(r : Parser.Result<AST.CaptureName>, cn : AST.CaptureName) : Bool {
     switch (r) {
-        case (#ok(_)) false;
-        case (#err(e)) {
-            if (AST.Span.cf(e.span, s) != 0) return false;
-            AST.ErrorKind.cf(e.kind, kind) == 0;
+        case (#err(_)) false;
+        case (#ok(n))  AST.CaptureName.cf(n, cn) == 0;
+    };
+};
+
+func checkCaptureNameErr(r : Parser.Result<AST.CaptureName>, err : AST.Error) : Bool {
+    switch (r) {
+        case (#ok(_))  false;
+        case (#err(e)) AST.Error.cf(e, err) == 0;
+    };
+};
+
+func checkGroup(r : Parser.Result<Parser.Either<AST.SetFlags, AST.Group>>, group : AST.Group) : Bool {
+    switch (r) {
+        case (#err(_)) false;
+        case (#ok(e)) {
+            switch (e) {
+                case (#left(_))  false;
+                case (#right(g)) {
+                    AST.Group.cf(g, group) == 0;
+                }
+            };
         };
     };
 };
@@ -43,73 +70,140 @@ func checkFlagsErr(r : Parser.Result<AST.Flags>, s : AST.Span, kind : AST.ErrorK
 suite.run([
     describe("Parser", [
         describe("Flags", [
-            it("i:", func () : Bool {
-                let p = Parser.Parser("i:");
-                checkFlags(p.parseFlags(), span(0, 1), [
-                    { span = span(0, 1); kind = #Flag(#CaseInsensitive) },
-                ]);
-            }),
             it("i)", func () : Bool {
                 let p = Parser.Parser("i)");
-                checkFlags(p.parseFlags(), span(0, 1), [
+                checkFlags(p.parseFlags(), AST.Flags.new(span(0, 1), [
                     { span = span(0, 1); kind = #Flag(#CaseInsensitive) },
-                ]);
+                ]));
             }),
             it("isU:", func () : Bool {
                 let p = Parser.Parser("isU:");
-                checkFlags(p.parseFlags(), span(0, 3), [
+                checkFlags(p.parseFlags(), AST.Flags.new(span(0, 3), [
                     { span = span(0, 1); kind = #Flag(#CaseInsensitive) },
                     { span = span(1, 2); kind = #Flag(#DotMatchesNewLine) },
                     { span = span(2, 3); kind = #Flag(#SwapGreed) },
-                ]);
+                ]));
             }),
             it("-isU:", func () : Bool {
                 let p = Parser.Parser("-isU:");
-                checkFlags(p.parseFlags(), span(0, 4), [
+                checkFlags(p.parseFlags(), AST.Flags.new(span(0, 4), [
                     { span = span(0, 1); kind = #Negation },
                     { span = span(1, 2); kind = #Flag(#CaseInsensitive) },
                     { span = span(2, 3); kind = #Flag(#DotMatchesNewLine) },
                     { span = span(3, 4); kind = #Flag(#SwapGreed) },
-                ]);
+                ]));
             }),
             it("i-sU:", func () : Bool {
                 let p = Parser.Parser("i-sU:");
-                checkFlags(p.parseFlags(), span(0, 4), [
+                checkFlags(p.parseFlags(), AST.Flags.new(span(0, 4), [
                     { span = span(0, 1); kind = #Flag(#CaseInsensitive) },
                     { span = span(1, 2); kind = #Negation },
                     { span = span(2, 3); kind = #Flag(#DotMatchesNewLine) },
                     { span = span(3, 4); kind = #Flag(#SwapGreed) },
-                ]);
+                ]));
             }),
 
             it("isU", func () : Bool {
                 let p = Parser.Parser("isU");
                 checkFlagsErr(
                     p.parseFlags(),
-                    span(3, 3),
-                    #FlagUnexpectedEOF
+                    AST.Error.new(#FlagUnexpectedEOF, span(3, 3))
                 );
             }),
             it("isUi:", func () : Bool {
                 let p = Parser.Parser("isUi:");
                 checkFlagsErr(
                     p.parseFlags(),
-                    span(3, 4),
-                    #FlagDuplicate({ original = span(0, 1) })
+                    AST.Error.new(#FlagDuplicate({ original = span(0, 1) }), span(3, 4))
                 );
             }),
             it("i-sU-i:", func () : Bool {
                 let p = Parser.Parser("i-sU-i:");
                 checkFlagsErr(
                     p.parseFlags(),
-                    span(4, 5),
-                    #FlagRepeatedNegation({ original = span(1, 2) })
+                    AST.Error.new(#FlagRepeatedNegation({ original = span(1, 2) }), span(4, 5))
                 );
             }),
             it("-)", func () : Bool {
                 let p = Parser.Parser("-)");
-                checkFlagsErr(p.parseFlags(), span(0, 1), #FlagDanglingNegation);
+                checkFlagsErr(p.parseFlags(), AST.Error.new(#FlagDanglingNegation, span(0, 1)));
+            })
+        ]),
+        describe("CaptureName", [
+            it("abc>", func () : Bool {
+                let p = Parser.Parser("abc>");
+                checkCaptureName(
+                    p.parseCaptureName(1),
+                    AST.CaptureName.new(span(0, 3), "abc", 1)
+                );
             }),
+            it("a_1", func () : Bool {
+                let p = Parser.Parser("a_1>");
+                checkCaptureName(
+                    p.parseCaptureName(1),
+                    AST.CaptureName.new(span(0, 3), "a_1", 1)
+                );
+            }),
+            it("a.1>", func () : Bool {
+                let p = Parser.Parser("a.1>");
+                checkCaptureName(
+                    p.parseCaptureName(1),
+                    AST.CaptureName.new(span(0, 3), "a.1", 1)
+                );
+            }),
+            it("a[1]>", func () : Bool {
+                let p = Parser.Parser("a[1]>");
+                checkCaptureName(
+                    p.parseCaptureName(1),
+                    AST.CaptureName.new(span(0, 4), "a[1]", 1)
+                );
+            }),
+
+            it("", func () : Bool {
+                let p = Parser.Parser("");
+                checkCaptureNameErr(p.parseCaptureName(1), AST.Error.new(#GroupNameUnexpectedEOF, span(0, 0)));
+            }),
+            it(">", func () : Bool {
+                let p = Parser.Parser(">");
+                checkCaptureNameErr(p.parseCaptureName(1), AST.Error.new(#GroupNameEmpty, span(0, 0)));
+            }),
+            it("0a>", func () : Bool {
+                let p = Parser.Parser("0a>");
+                checkCaptureNameErr(p.parseCaptureName(1), AST.Error.new(#GroupNameInvalid, span(0, 1)));
+            }),
+            it("a>a>", func () : Bool {
+                let p = Parser.Parser("a>a>");
+                ignore p.parseCaptureName(1);
+                checkCaptureNameErr(p.parseCaptureName(1), AST.Error.new(#GroupNameDuplicate, span(2, 3)));
+            })
+        ]),
+        describe("Group", [
+            it("(?iU)", func () : Bool {
+                let p = Parser.Parser("(?i-U)");
+                checkSetFlags(
+                    p.parseGroup(),
+                    AST.SetFlags.new(
+                        span(0, 6),
+                        AST.Flags.new(
+                            span(2, 5),
+                            [
+                                AST.FlagsItem.new(
+                                    span(2, 3),
+                                    #Flag(#CaseInsensitive)
+                                ),
+                                AST.FlagsItem.new(
+                                    span(3, 4),
+                                    #Negation
+                                ),
+                                AST.FlagsItem.new(
+                                    span(4, 5),
+                                    #Flag(#SwapGreed)
+                                )
+                            ]
+                        )
+                    )
+                )
+            })
         ])
-    ])
+    ]),
 ]);

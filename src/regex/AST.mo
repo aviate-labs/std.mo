@@ -1,4 +1,7 @@
+import Prim "mo:⛔";
+
 import Compare "../Compare";
+import Stack "../Stack";
 
 module {
     public type AST = {
@@ -24,17 +27,40 @@ module {
         #Concat : Concat;
     };
 
+    public module AST = {
+        public let cf : Compare.Cf<AST> = func (x : AST, y : AST) : Int {
+            // TODO!
+            return 0;
+        };
+    };
+
     public type Error = {
         kind    : ErrorKind;
         pattern : Text;
         span    : Span;
     };
 
+    // NOTE: ignores the pattern!
+    public module Error = {
+        public func new(kind : ErrorKind, span : Span) : Error = { kind; pattern = ""; span };
+
+        public let cf : Compare.Cf<Error> = func (x : Error, y : Error) : Int {
+            switch (ErrorKind.cf(x.kind, y.kind)) {
+                case (0) Span.cf(x.span, y.span);
+                case (n) n;
+            };
+        };
+    };
+
     public type ErrorKind = {
         #GroupNameEmpty;
         #GroupNameInvalid;
+        #GroupNameDuplicate;
         #GroupNameUnexpectedEOF;
         #GroupUnclosed;
+        #GroupUnopened;
+
+        #GroupsEmpty;
 
         #FlagUnrecognized;
         #FlagDanglingNegation;
@@ -49,6 +75,8 @@ module {
         #RepetitionMissing;
 
         #UnsupportedLookAround;
+
+        #TODO
     };
 
     public module ErrorKind = {
@@ -119,6 +147,25 @@ module {
     public type Concat = {
         span : Span;
         asts : [AST];
+    };
+
+    public module Concat = {
+        public func mut(c : Concat) : ConcatVar = {
+            var span = c.span;
+            var asts = Stack.init<AST>(16);
+        };
+    };
+
+    public type ConcatVar = {
+        var span : Span;
+        var asts : Stack.Stack<AST>;
+    };
+
+    public module ConcatVar = {
+        public func mut(c : ConcatVar) : Concat = {
+            span = c.span;
+            asts = Stack.toArray(c.asts);
+        };
     };
 
     public type Literal = {
@@ -265,10 +312,59 @@ module {
         ast  : AST;
     };
 
+    public module Group = {
+        public func new(span : Span, kind : GroupKind, ast : AST) : Group = { span; kind; ast };
+
+        public let cf : Compare.Cf<Group> = func (x : Group, y : Group) : Int {
+            switch (Span.cf(x.span, y.span)) {
+                case (0) switch (GroupKind.cf(x.kind, y.kind)) {
+                    case (0) AST.cf(x.ast, y.ast);
+                    case (n) n;
+                };
+                case (n) n;
+            }
+        };
+        
+        public func mut(g : Group) : GroupVar = {
+            var span = g.span;
+            var kind = g.kind;
+            var ast  = g.ast;
+        };
+    };
+
+    public type GroupVar = {
+        var span : Span;
+        var kind : GroupKind;
+        var ast  : AST;
+    };
+
+    public module GroupVar = {
+        public func mut(g : GroupVar) : Group = {
+            span = g.span;
+            kind = g.kind;
+            ast  = g.ast;
+        };
+    };
+
     public type GroupKind = {
         #CaptureIndex : Nat32;
         #CaptureName  : CaptureName;
         #NonCapturing : Flags;
+    };
+
+    public module GroupKind = {
+        public let cf : Compare.Cf<GroupKind> = func (x : GroupKind, y : GroupKind) : Int {
+            switch (x, y) {
+                case (#CaptureIndex(x), #CaptureIndex(y)) { Prim.nat32ToNat(x) - Prim.nat32ToNat(y) };
+                case (#CaptureName(x), #CaptureName(y)) {
+                    // TODO: lexical cf?
+                    if (x == y) return 0;
+                    -1;
+                };
+                case (#NonCapturing(x), #NonCapturing(y)) Flags.cf(x, y);
+                case (_) { -1 };
+            };
+        };
     };
 
     public type CaptureName = {
@@ -277,14 +373,62 @@ module {
         index : Nat32;
     };
 
+    public module CaptureName = {
+        public func new(span : Span, name : Text, index : Nat32) : CaptureName = { span; name; index };
+
+        public let cf : Compare.Cf<CaptureName> = func (x : CaptureName, y : CaptureName) : Int {
+            switch (Span.cf(x.span, y.span)) {
+                case (0) {
+                    // TODO: lexical cmp.
+                    if (x.name != y.name) return -1;
+                    Prim.nat32ToNat(x.index) - Prim.nat32ToNat(y.index);
+                };
+                case (n) n;
+            };
+        };
+    };
+
     public type SetFlags = {
         span  : Span;
         flags : Flags;
     };
 
+    public module SetFlags = {
+        public func new(span : Span, flags : Flags) : SetFlags = { span; flags };
+
+        public let cf : Compare.Cf<SetFlags> = func (x : SetFlags, y : SetFlags) : Int {
+            switch (Span.cf(x.span, y.span)) {
+                case (0) Flags.cf(x.flags, y.flags);
+                case (n) n;
+            };
+        };
+    };
+
     public type Flags = {
         span  : Span;
         items : [FlagsItem];
+    };
+
+    public module Flags = {
+        public func new(span : Span, items : [FlagsItem]) : Flags = { span; items };
+
+        public let cf : Compare.Cf<Flags> = func (x : Flags, y : Flags) : Int {
+            switch (Span.cf(x.span, y.span)) {
+                case (0) {
+                    let xS = x.items.size();
+                    let yS = y.items.size();
+                    if (xS != yS) return xS - yS;
+                    for (k in x.items.keys()) {
+                        switch (FlagsItem.cf(x.items[k], y.items[k])) {
+                            case (0) {};
+                            case (n) return n;
+                        };
+                    };
+                    0;
+                };
+                case (n) n;
+            };
+        };
     };
 
     public type FlagsItem = {
@@ -293,6 +437,8 @@ module {
     };
 
     public module FlagsItem = {
+        public func new(span : Span, kind : FlagsItemKind) : FlagsItem = { span; kind };
+
         public let cf : Compare.Cf<FlagsItem> = func (x : FlagsItem, y : FlagsItem) : Int {
             switch (Span.cf(x.span, y.span)) {
                 case (0) switch (x.kind == y.kind) {

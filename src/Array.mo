@@ -1,6 +1,6 @@
 import { abs; Array_tabulate; Array_init } = "mo:⛔";
 
-import Buffer "Buffer";
+import Stack "Stack";
 import Compare "Compare";
 import Iterator "Iterator";
 import v "var/Array";
@@ -54,9 +54,9 @@ module {
 
     /// Returns a new array containing all elements that satisfy the filtering function.
     public func filter<T>(xs : [T], f : (x : T) -> Bool) : [T] {
-        let ys : Buffer.Buffer<T> = Buffer.init(xs.size());
-        for (x in xs.vals()) if (f(x)) Buffer.add(ys, x);
-        Buffer.toArray(ys);
+        let ys : Stack.Stack<T> = Stack.init(xs.size());
+        for (x in xs.vals()) if (f(x)) Stack.push(ys, x);
+        Stack.toArray(ys);
     };
 
     /// Returns the first element in the array that satisfies the testing function, returns 'null' if none are found.
@@ -113,10 +113,10 @@ module {
 
     /// Returns a new array containing the results of invoking the given function on every element in the array.
     public func map<T, M>(xs : [T], f : (x : T) -> M) : [M] {
-        let ys  = Buffer.init<M>(xs.size());
-        let add = func (x : T) { Buffer.add<M>(ys, f(x)) };
-        forEach(xs, add);
-        Buffer.toArray(ys);
+        let ys  = Stack.init<M>(xs.size());
+        let push = func (x : T) { Stack.push<M>(ys, f(x)) };
+        forEach(xs, push);
+        Stack.toArray(ys);
     };
 
     /// Executes a user-supplied "reducer" callback function on each element of the array (from left to right), to reduce
@@ -198,9 +198,9 @@ module {
     };
 
     public func fromIterator<T>(i : Iterator.Iterator<T>) : [T] {
-        let b = Buffer.init<T>(16);
-        for (v in i) Buffer.add(b, v);
-        Buffer.toArray(b);
+        let b = Stack.init<T>(16);
+        for (v in i) Stack.push(b, v);
+        Stack.toArray(b);
     };
 
     private func negIndex(size : Nat, n : Int) : Nat {

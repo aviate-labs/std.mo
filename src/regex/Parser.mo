@@ -2,7 +2,7 @@ import Prim "mo:⛔";
 
 import AST "AST";
 import Array "../Array";
-import Buffer "../Buffer";
+import Stack "../Stack";
 import Iterator "../Iterator";
 import Result "../Result";
 
@@ -10,18 +10,32 @@ module {
     public type Result<T> = Result.Result<T, AST.Error>;
 
     public type Either<A, B> = {
-        #Left  : A;
-        #Right : B;
+        #left  : A;
+        #right : B;
+    };
+
+    public type GroupState = {
+        #Group : {
+            concat : AST.Concat;
+            group  : AST.Group;   
+        };
+        #Alternation : AST.Alternation;
+    };
+
+    private type GroupStateVar = {
+        concat : AST.ConcatVar;
+        group  : AST.GroupVar;
     };
 
     public class Parser(_pattern : Text) {
         let pattern : [Char] = Array.fromIterator(_pattern.chars());
         var offset   = 0;
-        var line     = 0;
-        var column   = 0;
-        let comments = Buffer.init<AST.Comment>(16);
-        let groups   = Buffer.init<AST.Concat>(16);
-        var index    = 0 : Nat32;
+        var line     = 1;
+        var column   = 1;
+        let comments = Stack.init<AST.Comment>(16);
+        let names    = Stack.init<AST.CaptureName>(16);
+        let groups   = Stack.init<GroupState>(16);
+        var index    = 1 : Nat32;
 
         public func err(kind : AST.ErrorKind, span : AST.Span) : AST.Error = {
             kind;
@@ -58,30 +72,89 @@ module {
             if (isEOF()) return #err(err(#GroupNameUnexpectedEOF, span()));
             assert(char() == '>');
             ignore bump();
+            if (start.offset == end.offset) return #err(err(#GroupNameEmpty, { start; end }));
             var name = "";
-            for (i in Iterator.range(start.offset, end.offset)) {
+            for (i in Iterator.range(start.offset, end.offset - 1)) {
                 name #= Prim.charToText(pattern[i]);
             };
-            if (name == "") return #err(err(#GroupNameEmpty, { start; end = start }));
-            #ok({
+            let captureName : AST.CaptureName = {
                 span = { start; end };
                 name;
                 index;
-            });
+            };
+            for (v in Stack.values(names)) {
+                if (v.name == captureName.name) return #err(err(
+                    #GroupNameDuplicate,
+                    captureName.span
+                ));
+            };
+            Stack.push(names, captureName);
+            #ok(captureName);
         };
 
-        public func pushGroup(concat : AST.Concat) {
+        public func pushGroup(concat : AST.ConcatVar) : Result<AST.ConcatVar> {
             assert(char() == '(');
-            // TODO
+            switch (parseGroup()) {
+                case (#err(e)) #err(e);
+                case (#ok(#left(sf))) {
+                    // TODO: set flags?
+                    Stack.push(concat.asts, #Flags(sf));
+                    #ok(concat);
+                };
+                case (#ok(#right(group))) {
+                    // TODO: set group flags?
+                    Stack.push(groups, #Group({
+                        concat = AST.ConcatVar.mut(concat); 
+                        group;
+                    }));
+                    #ok({
+                        var span = span();
+                        var asts = Stack.init<AST.AST>(16);
+                    });
+                };
+            };
+        };
+
+        public func popGroup(concat : AST.ConcatVar) : Result<AST.ConcatVar> {
+            assert(char() == ')');
+            let { group; concat = prior } : GroupStateVar = switch (Stack.pop(groups)) {
+                case (null) return #err(err(#GroupUnclosed, spanChar()));
+                case (? #Alternation(_)) return #err(err(#TODO, span()));
+                case (? #Group(g)) {{
+                    group  = AST.Group.mut(g.group);
+                    concat = AST.Concat.mut(g.concat);
+                }};
+            };
+            concat.span := AST.Span.withEnd(concat.span, pos());
+            ignore bump();
+            group.span := AST.Span.withEnd(group.span, pos());
+            group.ast  := #Concat(AST.ConcatVar.mut(concat));
+            Stack.push(prior.asts, #Group(AST.GroupVar.mut(group)));
+            #ok(prior);
+        };
+
+        public func popGroupEnd(concat : AST.ConcatVar) : Result<AST.AST> {
+            concat.span := AST.Span.withEnd(concat.span, pos());
+            let ast = switch (Stack.pop(groups)) {
+                case (null) #ok(#Concat(AST.ConcatVar.mut(concat)));
+                case (? #Alternation(_)) return #err(err(#TODO, span()));
+                case (? #Group(g)) return #err(err(#GroupUnclosed, g.group.span));
+            };
+            switch (Stack.pop(groups)) {
+                case (null) ast;
+                case (? #Alternation(_)) return #err(err(#TODO, span()));
+                case (? #Group(g)) return #err(err(#GroupUnclosed, g.group.span));
+            };
         };
 
         public func parseGroup() : Result<Either<AST.SetFlags, AST.Group>> {
-            let openChar = spanChar();
+            assert(char() == '(');
+            let openSpan = spanChar();
             ignore bump();
             bumpSpace();
             if (isLookAroundPrefix()) return #err(err(
                 #UnsupportedLookAround, {
-                    start = openChar.start;
+                    start = openSpan.start;
                     end   = span().end;
                 },
             ));
@@ -92,36 +165,33 @@ module {
                     case (#ok(n))  n;
                     case (#err(e)) return #err(e);
                 };
-                #ok(#Right({
-                    span = openChar;
+                #ok(#right({
+                    span = openSpan;
                     kind = #CaptureName(n);
                     ast  = #Empty(span());
                 }));
             } else if (bumpIf("?")) {
-                if (isEOF()) return #err(err(#GroupUnclosed, openChar));
+                if (isEOF()) return #err(err(#GroupUnclosed, openSpan));
                 let flags = switch (parseFlags()) {
                     case (#ok(flags)) flags;
                     case (#err(e)) return #err(e);
                 };
-                let end = char();
+                let endChar = char();
                 ignore bump();
-                switch (end) {
+                switch (endChar) {
                     case (')') {
                         if (flags.items.size() == 0) {
                             return #err(err(#RepetitionMissing, innerSpan));
                         };
-                        #ok(#Left({
-                            span = {
-                                start = openChar.start;
-                                end   = pos();
-                            };
+                        #ok(#left({
+                            span = AST.Span.withEnd(openSpan, pos());
                             flags;
                         }))
                     };
                     case (_) {
-                        assert(end == ':');
-                        #ok(#Right({
-                            span = openChar;
+                        assert(endChar == ':');
+                        #ok(#right({
+                            span = openSpan;
                             kind = #NonCapturing(flags);
                             ast  = #Empty(span());
                         }));
@@ -129,8 +199,8 @@ module {
                 };
             } else {
                 let i = nextCaptureIndex();
-                #ok(#Right({
-                    span = openChar;
+                #ok(#right({
+                    span = openSpan;
                     kind = #CaptureIndex(i);
                     ast  = #Empty(span());
                 }));
@@ -139,7 +209,7 @@ module {
 
         public func parseFlags() : Result<AST.Flags> {
             let start = span();
-            let items = Buffer.init<AST.FlagsItem>(16);
+            let items = Stack.init<AST.FlagsItem>(16);
             var negated : ?AST.Span = null;
             label l loop {
                 let c = char();
@@ -151,12 +221,12 @@ module {
                         span; 
                         kind = #Negation;
                     };
-                    for (i in Buffer.values(items)) {
+                    for (i in Stack.values(items)) {
                         if (AST.FlagsItemKind.cf(i.kind, item.kind) == 0) return #err(err(#FlagRepeatedNegation({
                             original = i.span;
                         }), spanChar())); 
                     };
-                    Buffer.add(items, item);
+                    Stack.push(items, item);
                 } else {
                     negated := null;
                     let item : AST.FlagsItem = {
@@ -166,12 +236,12 @@ module {
                             case (#err(e)) return #err(e);
                         });
                     };
-                    for (i in Buffer.values(items)) {
+                    for (i in Stack.values(items)) {
                         if (AST.FlagsItemKind.cf(i.kind, item.kind) == 0) return #err(err(#FlagDuplicate({
                             original = i.span;
                         }), spanChar())); 
                     };
-                    Buffer.add(items, item);
+                    Stack.push(items, item);
                 };
                 if (not bump()) return #err(err(#FlagUnexpectedEOF, span()));
             };
@@ -181,7 +251,7 @@ module {
             };
             #ok({
                 span  = { start = start.start; end = pos() };
-                items = Buffer.toArray(items);
+                items = Stack.toArray(items);
             });
         };
 
@@ -197,20 +267,31 @@ module {
             };
         };
 
-        public func parse() : [AST.AST] {
-            var concat : AST.Concat = {
-                span = span();
-                asts = [];
+        public func parse() : Result<AST.AST> {
+            var concat : AST.ConcatVar = {
+                var span = span();
+                var asts = Stack.init<AST.AST>(16);
             };
             label l loop {
                 bumpSpace();
                 if (isEOF()) break l;
                 switch (char()) {
-                    case ('(') pushGroup(concat);
-                    case (_) {};
+                    case ('(') switch (pushGroup(concat)) {
+                        case (#err(e)) return #err(e);
+                        case (#ok(c)) { concat := c };
+                    };
+                    case (')') switch (popGroup(concat)) {
+                        case (#err(e)) return #err(e);
+                        case (#ok(c)) { concat := c };
+                    };
+                    case (_) return #err(AST.Error.new(#TODO, span()));
                 };
             };
-            [];
+            let ast = switch (popGroupEnd(concat)) {
+                case (#err(e))  return #err(e);
+                case (#ok(ast)) { ast };
+            };
+            #ok(ast);
         };
 
         public func span() : AST.Span {
@@ -284,7 +365,7 @@ module {
                                 if (c == '\n') break l;
                                 comment #= Prim.charToText(c);
                             };
-                            Buffer.add(comments, {
+                            Stack.push(comments, {
                                 span = {
                                     start;
                                     end = pos();

@@ -115,3 +115,7 @@ Converts an immutable array to a variable array.
 `func fromVar<T>(xs : [var T]) : [T]`
 
 Converts a variable array to an immutable array.
+
+## Function `fromIterator`
+`func fromIterator<T>(i : Iterator.Iterator<T>) : [T]`
+

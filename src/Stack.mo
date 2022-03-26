@@ -2,19 +2,19 @@ import { Array_init; Array_tabulate } = "mo:⛔";
 
 import Iterator "Iterator";
 
-module Buffer {
-    /// An extendable mutable buffer.
-    /// - __capacity__ : The capacity of the buffer, is used to initialize if xs.size() == 0.
+module Stack {
+    /// An extendable mutable stack.
+    /// - __capacity__ : The capacity of the stack, is used to initialize if xs.size() == 0.
     /// - __size__ : The current occupied size.
-    /// - __xs__ : The managed backbone array of the buffer.
-    public type Buffer<T> = {
+    /// - __xs__ : The managed backbone array of the stack.
+    public type Stack<T> = {
         var capacity : Nat;
         var size     : Nat;
         var xs       : [var T];
     };
 
-    /// Initializes a new buffer with the given capacity.
-    public func init<T>(capacity : Nat) : Buffer<T> {
+    /// Initializes a new stack with the given capacity.
+    public func init<T>(capacity : Nat) : Stack<T> {
         return {
             var capacity = capacity;
             var size     = 0;
@@ -22,8 +22,8 @@ module Buffer {
         };
     };
 
-    /// Makes a new buffer based on the given array.
-    public func make<T>(xs : [T]) : Buffer<T> {
+    /// Makes a new stack based on the given array.
+    public func make<T>(xs : [T]) : Stack<T> {
         let size = xs.size();
         {
             var capacity = size;
@@ -40,13 +40,13 @@ module Buffer {
         ys;
     };
 
-    /// Creates an empty buffer with capacity 0.
-    public func empty<T>() : Buffer<T> {
+    /// Creates an empty stack with capacity 0.
+    public func empty<T>() : Stack<T> {
         make([]);
     };
 
-    /// Adds the given value 'x' to the buffer.
-    public func add<T>(b : Buffer<T>, x : T) {
+    /// Adds the given value 'x' to the stack.
+    public func push<T>(b : Stack<T>, x : T) {
         if (b.size == b.xs.size()) {
             let size = if (b.size == 0) {
                 if (0 < b.capacity) { b.capacity } else { 1 };
@@ -67,12 +67,19 @@ module Buffer {
         b.size       += 1;
     };
 
-    /// Extracts an array from the buffer.
-    public func toArray<T>(b : Buffer<T>) : [T] {
+    // Removes the last value from the stack and returns it.
+    public func pop<T>(b : Stack<T>) : ?T {
+        if (b.size == 0) return null;
+        b.size -= 1;
+        ?b.xs[b.size];
+    };
+
+    /// Extracts an array from the stack.
+    public func toArray<T>(b : Stack<T>) : [T] {
         Array_tabulate<T>(b.size, func(i : Nat) : T { b.xs[i] });
     };
 
-    public func values<T>(b : Buffer<T>) : Iterator.Iterator<T> = object {
+    public func values<T>(b : Stack<T>) : Iterator.Iterator<T> = object {
         var n = 0;
         public func next() : ?T {
             if (n == b.size) return null;
