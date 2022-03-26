@@ -144,8 +144,8 @@ module {
                         case (null) break l;
                         case (? e) {
                             let p : Nat = map.keyType.hash(e.key, size);
-                            new[p] := ?{ 
-                                key      = e.key; 
+                            new[p] := ?{
+                                key      = e.key;
                                 value    = e.value;
                                 var next = new[p];
                             };

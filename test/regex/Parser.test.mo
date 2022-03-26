@@ -1,4 +1,4 @@
-import { describe; it; itp; Suite } = "mo:testing/Suite";
+import { describe; it; Suite } = "mo:testing/Suite";
 
 import Prim "mo:⛔";
 
@@ -64,6 +64,20 @@ func checkGroup(r : Parser.Result<Parser.Either<AST.SetFlags, AST.Group>>, group
                 }
             };
         };
+    };
+};
+
+func checkAST(r : Parser.Result<AST.AST>, ast : AST.AST) : Bool {
+    switch (r) {
+        case (#err(_)) false;
+        case (#ok(e))  AST.AST.cf(e, ast) == 0;
+    };
+};
+
+func checkASTErr(r : Parser.Result<AST.AST>, err : AST.Error) : Bool {
+    switch (r) {
+        case (#ok(_))  false;
+        case (#err(e)) AST.Error.cf(e, err) == 0;
     };
 };
 
@@ -202,6 +216,80 @@ suite.run([
                             ]
                         )
                     )
+                )
+            }),
+            it("(a)", func () : Bool {
+                let p = Parser.Parser("(a)");
+                checkAST(
+                    p.parse(),
+                    #Group(AST.Group.new(
+                        span(0, 3),
+                        #CaptureIndex(1),
+                        #Literal(AST.Literal.new(1, 'a'))
+                    ))
+                );
+            }),
+            it("(())", func () : Bool {
+                let p = Parser.Parser("(())");
+                checkAST(
+                    p.parse(),
+                    #Group(AST.Group.new(
+                        span(0, 4),
+                        #CaptureIndex(1),
+                        #Group(AST.Group.new(
+                            span(1, 3),
+                            #CaptureIndex(2),
+                            #Empty(span(2, 2))
+                        ))
+                    ))
+                );
+            }),
+            it("(?:a)", func () : Bool {
+                let p = Parser.Parser("(?:a)");
+                checkAST(
+                    p.parse(),
+                    #Group(AST.Group.new(
+                        span(0, 5),
+                        #NonCapturing(AST.Flags.new(span(2, 2), [])),
+                        #Literal(AST.Literal.new(3, 'a'))
+                    ))
+                );
+            }),
+            it("(?i-U:a)", func () : Bool {
+                let p = Parser.Parser("(?i-U:a)");
+                checkAST(
+                    p.parse(),
+                    #Group(AST.Group.new(
+                        span(0, 8),
+                        #NonCapturing(AST.Flags.new(span(2, 5), [
+                            AST.FlagsItem.new(span(2, 3), #Flag(#CaseInsensitive)),
+                            AST.FlagsItem.new(span(3, 4), #Negation),
+                            AST.FlagsItem.new(span(4, 5), #Flag(#SwapGreed)),
+                        ])),
+                        #Literal(AST.Literal.new(6, 'a'))
+                    ))
+                );
+            }),
+
+            it("(?", func () : Bool {
+                let p = Parser.Parser("(?");
+                checkASTErr(
+                    p.parse(),
+                    AST.Error.new(#GroupUnclosed, span(0, 1))
+                )
+            }),
+            it("(?P", func () : Bool {
+                let p = Parser.Parser("(?P");
+                checkASTErr(
+                    p.parse(),
+                    AST.Error.new(#FlagUnrecognized, span(2, 3))
+                )
+            }),
+            it("a)", func () : Bool {
+                let p = Parser.Parser("a)");
+                checkASTErr(
+                    p.parse(),
+                    AST.Error.new(#GroupUnopened, span(1, 2))
                 )
             })
         ])

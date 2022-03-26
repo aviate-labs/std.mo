@@ -16,7 +16,7 @@ suite.run([
         it("at", func () : Bool {
             let array = [0, 1, 3, 5, 10];
             if (Array.at(array, 2) != 3) return false;
-            Array.at(array, -2) == 5; 
+            Array.at(array, -2) == 5;
         }),
 
         it("concat", func () : Bool {

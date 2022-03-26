@@ -78,7 +78,7 @@ it to a single value.
 ## Function `reduceRight`
 `func reduceRight<T, R>(xs : [T], f : (p : R, x : T) -> R, initial : R) : R`
 
-Executes a user-supplied "reducer" callback function on each element of the array (from right to left), to reduce 
+Executes a user-supplied "reducer" callback function on each element of the array (from right to left), to reduce
 it to a single value.
 
 ## Function `reverse`

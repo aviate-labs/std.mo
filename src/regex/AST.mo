@@ -29,8 +29,10 @@ module {
 
     public module AST = {
         public let cf : Compare.Cf<AST> = func (x : AST, y : AST) : Int {
-            // TODO!
-            return 0;
+            switch (x, y) {
+                case (#Group(x), #Group(y)) Group.cf(x, y);
+                case (_) 0; // TODO!
+            };
         };
     };
 
@@ -59,6 +61,9 @@ module {
         #GroupNameUnexpectedEOF;
         #GroupUnclosed;
         #GroupUnopened;
+
+        #EscapeUnexpectedEOF;
+        #UnsupportedBackReference;
 
         #GroupsEmpty;
 
@@ -129,7 +134,7 @@ module {
         public let cf : Compare.Cf<Span> = func (x : Span, y : Span) : Int {
             switch (Position.cf(x.start, y.start)) {
                 case (0) Position.cf(x.end, y.end);
-                case (n) { n }; 
+                case (n) { n };
             };
         };
     };
@@ -154,6 +159,14 @@ module {
             var span = c.span;
             var asts = Stack.init<AST>(16);
         };
+
+        public func toAST(c : Concat) : AST {
+            switch (c.asts.size()) {
+                case (0) #Empty(c.span);
+                case (1) c.asts[0];
+                case (_) #Concat(c);
+            };
+        };
     };
 
     public type ConcatVar = {
@@ -172,6 +185,17 @@ module {
         span : Span;
         kind : LiteralKind;
         c    : Char;
+    };
+
+    public module Literal = {
+        public func new(n : Nat, c : Char) : Literal = {
+            span = {
+                start = Position.new(n, 0, n + 1);
+                end   = Position.new(n + 1, 0, n + 2);
+            };
+            kind = #Verbatim;
+            c;
+        };
     };
 
     public type LiteralKind = {
@@ -324,7 +348,7 @@ module {
                 case (n) n;
             }
         };
-        
+
         public func mut(g : Group) : GroupVar = {
             var span = g.span;
             var kind = g.kind;

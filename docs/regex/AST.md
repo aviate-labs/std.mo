@@ -17,7 +17,7 @@
 
 
 ## Type `ErrorKind`
-`type ErrorKind = {#GroupNameEmpty; #GroupNameInvalid; #GroupNameUnexpectedEOF; #GroupUnclosed; #FlagUnrecognized; #FlagDanglingNegation; #FlagRepeatedNegation : { original : Span }; #FlagUnexpectedEOF; #FlagDuplicate : { original : Span }; #RepetitionMissing; #UnsupportedLookAround}`
+`type ErrorKind = {#GroupNameEmpty; #GroupNameInvalid; #GroupNameDuplicate; #GroupNameUnexpectedEOF; #GroupUnclosed; #GroupUnopened; #EscapeUnexpectedEOF; #UnsupportedBackReference; #GroupsEmpty; #FlagUnrecognized; #FlagDanglingNegation; #FlagRepeatedNegation : { original : Span }; #FlagUnexpectedEOF; #FlagDuplicate : { original : Span }; #RepetitionMissing; #UnsupportedLookAround; #TODO}`
 
 
 ## Value `ErrorKind`
@@ -52,8 +52,24 @@
 `type Concat = { span : Span; asts : [AST] }`
 
 
+## Value `Concat`
+`let Concat`
+
+
+## Type `ConcatVar`
+`type ConcatVar = { var span : Span; var asts : Stack.Stack<AST> }`
+
+
+## Value `ConcatVar`
+`let ConcatVar`
+
+
 ## Type `Literal`
 `type Literal = { span : Span; kind : LiteralKind; c : Char }`
+
+
+## Value `Literal`
+`let Literal`
 
 
 ## Type `LiteralKind`
@@ -164,6 +180,14 @@
 `let Group`
 
 
+## Type `GroupVar`
+`type GroupVar = { var span : Span; var kind : GroupKind; var ast : AST }`
+
+
+## Value `GroupVar`
+`let GroupVar`
+
+
 ## Type `GroupKind`
 `type GroupKind = {#CaptureIndex : Nat32; #CaptureName : CaptureName; #NonCapturing : Flags}`
 
@@ -174,6 +198,10 @@
 
 ## Type `CaptureName`
 `type CaptureName = { span : Span; name : Text; index : Nat32 }`
+
+
+## Value `CaptureName`
+`let CaptureName`
 
 
 ## Type `SetFlags`

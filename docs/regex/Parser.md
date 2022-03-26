@@ -26,13 +26,33 @@
 
 
 
+### Function `parsePrimitive`
+`func parsePrimitive() : Result<Primitive>`
+
+
+
+### Function `parseEscape`
+`func parseEscape() : Result<Primitive>`
+
+
+
 ### Function `parseCaptureName`
 `func parseCaptureName(index : Nat32) : Result<AST.CaptureName>`
 
 
 
 ### Function `pushGroup`
-`func pushGroup(concat : AST.Concat)`
+`func pushGroup(concat : AST.ConcatVar) : Result<AST.ConcatVar>`
+
+
+
+### Function `popGroup`
+`func popGroup(concat : AST.ConcatVar) : Result<AST.ConcatVar>`
+
+
+
+### Function `popGroupEnd`
+`func popGroupEnd(concat : AST.ConcatVar) : Result<AST.AST>`
 
 
 
@@ -52,7 +72,7 @@
 
 
 ### Function `parse`
-`func parse() : [AST.AST]`
+`func parse() : Result<AST.AST>`
 
 
 

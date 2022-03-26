@@ -129,7 +129,7 @@ module {
         i;
     };
 
-    /// Executes a user-supplied "reducer" callback function on each element of the array (from right to left), to reduce 
+    /// Executes a user-supplied "reducer" callback function on each element of the array (from right to left), to reduce
     /// it to a single value.
     public func reduceRight<T, R>(xs : [T], f : (p : R, x : T) -> R, initial : R) : R {
         let size = xs.size();

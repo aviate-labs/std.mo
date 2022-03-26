@@ -14,10 +14,30 @@ module {
         #right : B;
     };
 
-    public type GroupState = {
+    private type Primitive = {
+        #Literal   : AST.Literal;
+        #Assertion : AST.Assertion;
+        #Dot       : AST.Span;
+        #Perl      : AST.ClassPerl;
+        #Unicode   : AST.ClassUnicode;
+    };
+
+    private module Primitive = {
+        public func toAST(p : Primitive) : AST.AST {
+            switch (p) {
+                case (#Literal(l))   #Literal(l);
+                case (#Assertion(a)) #Assertion(a);
+                case (#Dot(d))       #Dot(d);
+                case (#Perl(c))      #Class(#Perl(c));
+                case (#Unicode(c))   #Class(#Unicode(c));
+            };
+        };
+    };
+
+    private type GroupState = {
         #Group : {
             concat : AST.Concat;
-            group  : AST.Group;   
+            group  : AST.Group;
         };
         #Alternation : AST.Alternation;
     };
@@ -54,6 +74,51 @@ module {
             or (not first and (('0' <= c and c <= '9') or c == '.' or c == '[' or c == ']'))
             or ('A' <= c and c <= 'Z')
             or ('a' <= c and c <= 'z');
+        };
+
+        public func parsePrimitive() : Result<Primitive> {
+            switch (char()) {
+                case '\\' parseEscape();
+                case '.' {
+                    let d = #Dot(spanChar());
+                    ignore bump();
+                    #ok(d);
+                };
+                case '^' {
+                    let a = #Assertion({
+                        span = spanChar();
+                        kind = #StartLine;
+                    });
+                    ignore bump();
+                    #ok(a);
+                };
+                case '$' {
+                    let a = #Assertion({
+                        span = spanChar();
+                        kind = #EndLine;
+                    });
+                    ignore bump();
+                    #ok(a);
+                };
+                case (c) {
+                    let p = #Literal({
+                        span = spanChar();
+                        kind = #Verbatim;
+                        c;
+                    });
+                    ignore bump();
+                    #ok(p);
+                };
+            };
+        };
+
+        public func parseEscape() : Result<Primitive> {
+            assert(char() == '\\');
+            let start = pos();
+            if (not bump()) return #err(err(#EscapeUnexpectedEOF, { start; end = pos() }));
+            let c = char();
+            // TODO: octal, unicode, etc...
+            return #err(err(#UnsupportedBackReference, { start; end = spanChar().end }));
         };
 
         // @pre first character after '<'.
@@ -104,7 +169,7 @@ module {
                 case (#ok(#right(group))) {
                     // TODO: set group flags?
                     Stack.push(groups, #Group({
-                        concat = AST.ConcatVar.mut(concat); 
+                        concat = AST.ConcatVar.mut(concat);
                         group;
                     }));
                     #ok({
@@ -118,7 +183,7 @@ module {
         public func popGroup(concat : AST.ConcatVar) : Result<AST.ConcatVar> {
             assert(char() == ')');
             let { group; concat = prior } : GroupStateVar = switch (Stack.pop(groups)) {
-                case (null) return #err(err(#GroupUnclosed, spanChar()));
+                case (null) return #err(err(#GroupUnopened, spanChar()));
                 case (? #Alternation(_)) return #err(err(#TODO, span()));
                 case (? #Group(g)) {{
                     group  = AST.Group.mut(g.group);
@@ -128,7 +193,7 @@ module {
             concat.span := AST.Span.withEnd(concat.span, pos());
             ignore bump();
             group.span := AST.Span.withEnd(group.span, pos());
-            group.ast  := #Concat(AST.ConcatVar.mut(concat));
+            group.ast  := AST.Concat.toAST(AST.ConcatVar.mut(concat));
             Stack.push(prior.asts, #Group(AST.GroupVar.mut(group)));
             #ok(prior);
         };
@@ -136,7 +201,7 @@ module {
         public func popGroupEnd(concat : AST.ConcatVar) : Result<AST.AST> {
             concat.span := AST.Span.withEnd(concat.span, pos());
             let ast = switch (Stack.pop(groups)) {
-                case (null) #ok(#Concat(AST.ConcatVar.mut(concat)));
+                case (null) #ok(AST.Concat.toAST(AST.ConcatVar.mut(concat)));
                 case (? #Alternation(_)) return #err(err(#TODO, span()));
                 case (? #Group(g)) return #err(err(#GroupUnclosed, g.group.span));
             };
@@ -218,13 +283,13 @@ module {
                     let span = spanChar();
                     negated := ?span;
                     let item : AST.FlagsItem = {
-                        span; 
+                        span;
                         kind = #Negation;
                     };
                     for (i in Stack.values(items)) {
                         if (AST.FlagsItemKind.cf(i.kind, item.kind) == 0) return #err(err(#FlagRepeatedNegation({
                             original = i.span;
-                        }), spanChar())); 
+                        }), spanChar()));
                     };
                     Stack.push(items, item);
                 } else {
@@ -239,7 +304,7 @@ module {
                     for (i in Stack.values(items)) {
                         if (AST.FlagsItemKind.cf(i.kind, item.kind) == 0) return #err(err(#FlagDuplicate({
                             original = i.span;
-                        }), spanChar())); 
+                        }), spanChar()));
                     };
                     Stack.push(items, item);
                 };
@@ -284,7 +349,12 @@ module {
                         case (#err(e)) return #err(e);
                         case (#ok(c)) { concat := c };
                     };
-                    case (_) return #err(AST.Error.new(#TODO, span()));
+                    case (c) switch (parsePrimitive()) {
+                        case (#err(e)) return #err(e);
+                        case (#ok(p)) {
+                            Stack.push(concat.asts, Primitive.toAST(p));
+                        };
+                    };
                 };
             };
             let ast = switch (popGroupEnd(concat)) {

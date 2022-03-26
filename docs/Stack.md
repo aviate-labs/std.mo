@@ -23,10 +23,14 @@ Makes a new stack based on the given array.
 
 Creates an empty stack with capacity 0.
 
-## Function `add`
-`func add<T>(b : Stack<T>, x : T)`
+## Function `push`
+`func push<T>(b : Stack<T>, x : T)`
 
 Adds the given value 'x' to the stack.
+
+## Function `pop`
+`func pop<T>(b : Stack<T>) : ?T`
+
 
 ## Function `toArray`
 `func toArray<T>(b : Stack<T>) : [T]`

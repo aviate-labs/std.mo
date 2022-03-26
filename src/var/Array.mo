@@ -14,7 +14,7 @@ module {
 
         let size = xs.size();
         if (size < 2) return;
-        
+
         func partition(xs : [var T], lo : Nat, hi : Nat) : Nat {
             let pivot = xs[(hi + lo) / 2];
             var i = lo;
@@ -35,7 +35,7 @@ module {
             sort(xs, lo, p);
             sort(xs, p + 1, hi);
         };
-        
+
         sort(xs, 0, xs.size() - 1);
     };
 };
