@@ -1,6 +1,7 @@
 import Prim "mo:⛔";
 
-import Buffer "Buffer";
+import Stack "Stack";
+import Char "Char";
 
 module {
     public func fromArray(chars : [Char]) : Text {
@@ -10,8 +11,16 @@ module {
     };
 
     public func toArray(t : Text) : [Char] {
-        let b = Buffer.init<Char>(8);
-        for (c in t.chars()) Buffer.add(b, c);
-        Buffer.toArray(b);
+        let b = Stack.init<Char>(8);
+        for (c in t.chars()) Stack.push(b, c);
+        Stack.toArray(b);
+    };
+
+    public func fromChars(chars : [Char]) : Text {
+        var t = "";
+        for (c in chars.vals()) {
+            t #= Char.toText(c);
+        };
+        t;
     };
 };

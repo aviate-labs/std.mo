@@ -2,9 +2,12 @@ import Prim "mo:⛔";
 
 import AST "AST";
 import Array "../Array";
-import Stack "../Stack";
+import Char "../Char";
 import Iterator "../Iterator";
+import { parseNat; Nat32 } = "../Nat";
 import Result "../Result";
+import Stack "../Stack";
+import Text "../Text";
 
 module {
     public type Result<T> = Result.Result<T, AST.Error>;
@@ -172,10 +175,7 @@ module {
                         concat = AST.ConcatVar.mut(concat);
                         group;
                     }));
-                    #ok({
-                        var span = span();
-                        var asts = Stack.init<AST.AST>(16);
-                    });
+                    #ok(AST.ConcatVar.new(span()));
                 };
             };
         };
@@ -332,11 +332,140 @@ module {
             };
         };
 
-        public func parse() : Result<AST.AST> {
-            var concat : AST.ConcatVar = {
-                var span = span();
-                var asts = Stack.init<AST.AST>(16);
+        public func parseRepetition(
+            concat : AST.ConcatVar,
+            kind   : AST.RepetitionKind
+        ) : Result<()> {
+            let c = char();
+            assert(c == '?' or c == '*' or c == '+');
+            let start = pos();
+            let ast = switch (Stack.pop(concat.asts)) {
+                case (null) return #err(err(#RepetitionMissing, span()));
+                case (? ast) { ast };
             };
+            switch (ast) {
+                case (#Empty(_)) return #err(err(#RepetitionMissing, span()));
+                case (#Flags(_)) return #err(err(#RepetitionMissing, span()));
+                case (_) {}
+            };
+            var greedy = if (bump() and char() == '?') {
+                ignore bump();
+                false;
+            } else { true };
+            Stack.push(concat.asts, #Repetition({
+                span =  AST.Span.withEnd(AST.AST.span(ast), pos());
+                op   = {
+                    span = {
+                        start;
+                        end = pos();
+                    };
+                    kind;
+                };
+                greedy;
+                ast;
+            }));
+            #ok();
+        };
+
+        public func parseRange(
+            concat : AST.ConcatVar,
+        ) : Result<()> {
+            assert(char() == '{');
+            let start = pos();
+            let ast = switch (Stack.pop(concat.asts)) {
+                case (null) return #err(err(#RepetitionMissing, span()));
+                case (? ast) { ast };
+            };
+            switch (ast) {
+                case (#Empty(_)) return #err(err(#RepetitionMissing, span()));
+                case (#Flags(_)) return #err(err(#RepetitionMissing, span()));
+                case (_) {}
+            };
+            if (not bumpBumpSpace()) return #err(err(#RepetitionCountUnclosed, {
+                start;
+                end = pos();
+            }));
+            let cStart = switch (parseDecimal()) {
+                case (#ok(n))  n;
+                case (#err(e)) return #err(e);
+            };
+            var range : AST.RepetitionRange = #Exactly(cStart);
+            if (isEOF()) return #err(err(#RepetitionCountUnclosed, {
+                start;
+                end = pos();
+            }));
+            if (char() == ',') {
+                if (not bumpBumpSpace()) return #err(err(#RepetitionCountUnclosed, {
+                    start;
+                    end = pos();
+                }));
+                if (char() == '}') {
+                    range := #AtLeast(cStart);
+                } else {
+                    let cEnd = switch (parseDecimal()) {
+                        case (#ok(n))  n;
+                        case (#err(e)) return #err(e);
+                    };
+                    range := #Bounded(cStart, cEnd);
+                };
+            };
+            if (isEOF() or char() != '}') return #err(err(#RepetitionCountUnclosed, {
+                start;
+                end = pos();
+            }));
+            var greedy = true;
+            if (bumpBumpSpace() and char() == '?') {
+                greedy := false;
+                ignore bump();
+            };
+
+            let op = {
+                start;
+                end = pos();
+            };
+            if (not AST.RepetitionRange.isValid(range)) return #err(err(#RepetitionCountInvalid, op));
+            Stack.push(concat.asts, #Repetition({
+                span = AST.Span.withEnd(AST.AST.span(ast), pos());
+                op   = {
+                    span = op;
+                    kind = #Range(range);
+                };
+                greedy;
+                ast;
+            }));
+            #ok();
+        };
+
+        private func parseDecimal() : Result<Nat32> {
+            while (not isEOF() and Prim.charIsWhitespace(char())) {
+                ignore bump()
+            };
+            let start = pos();
+            let t = Stack.init<Char>(2);
+            while (not isEOF() and Char.isDigit(char())) {
+                Stack.push(t, char());
+                ignore bumpBumpSpace();
+            };
+            let span = {
+                start;
+                end = pos();
+            };
+            while (not isEOF() and Prim.charIsWhitespace(char())) {
+                ignore bump()
+            };
+            if (t.size == 0) return #err(err(#DecimalEmpty, span));
+            let digits = Text.fromChars(Stack.toArray(t));
+            #ok(Nat32.fromNat(switch (parseNat(digits)) {
+                case (#ok(n)) n;
+                case (#err(_)) {
+                    assert(false); // unreachable;
+                    0;
+                };
+            }));
+        };
+
+        public func parse() : Result<AST.AST> {
+            var concat = AST.ConcatVar.new(span());
             label l loop {
                 bumpSpace();
                 if (isEOF()) break l;
@@ -348,6 +477,22 @@ module {
                     case (')') switch (popGroup(concat)) {
                         case (#err(e)) return #err(e);
                         case (#ok(c)) { concat := c };
+                    };
+                    case ('?') switch (parseRepetition(concat, #ZeroOrOne)) {
+                        case (#err(e)) return #err(e);
+                        case (#ok(_)) {};
+                    };
+                    case ('*') switch (parseRepetition(concat, #ZeroOrMore)) {
+                        case (#err(e)) return #err(e);
+                        case (#ok(_)) {};
+                    };
+                    case ('+') switch (parseRepetition(concat, #OneOrMore)) {
+                        case (#err(e)) return #err(e);
+                        case (#ok(_)) {};
+                    };
+                    case ('{') switch (parseRange(concat)) {
+                        case (#err(e)) return #err(e);
+                        case (#ok(_)) {};
                     };
                     case (c) switch (parsePrimitive()) {
                         case (#err(e)) return #err(e);
@@ -447,6 +592,12 @@ module {
                     };
                 }
             };
+        };
+
+        public func bumpBumpSpace() : Bool {
+            if (not bump()) return false;
+            bumpSpace();
+            not isEOF();
         };
 
         public func peek() : ?Char {

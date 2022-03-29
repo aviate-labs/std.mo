@@ -71,6 +71,16 @@
 
 
 
+### Function `parseRepetition`
+`func parseRepetition(concat : AST.ConcatVar, kind : AST.RepetitionKind) : Result<()>`
+
+
+
+### Function `parseRange`
+`func parseRange(concat : AST.ConcatVar) : Result<()>`
+
+
+
 ### Function `parse`
 `func parse() : Result<AST.AST>`
 
@@ -123,6 +133,11 @@
 
 ### Function `bumpSpace`
 `func bumpSpace()`
+
+
+
+### Function `bumpBumpSpace`
+`func bumpBumpSpace() : Bool`
 
 
 

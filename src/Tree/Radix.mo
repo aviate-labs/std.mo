@@ -1,7 +1,7 @@
 import Prim "mo:⛔";
 
 import Array "../Array";
-import Buffer "../Buffer";
+import Stack "../Stack";
 import Search "../Search";
 import Sort "../Sort";
 import Text "../Text";
@@ -299,12 +299,12 @@ module {
     public func size<T>(t : Tree<T>) : Nat = t.size;
 
     public func toArray<T>(tree : Tree<T>) : [([Char], T)] {
-        let b = Buffer.init<([Char], T)>(tree.size);
+        let b = Stack.init<([Char], T)>(tree.size);
         walk(tree.root, func (key : [Char], value : T) : Bool {
-            Buffer.add(b, (key, value));
+            Stack.push(b, (key, value));
             false;
         });
-        Buffer.toArray(b);
+        Stack.toArray(b);
     };
 
     public func walk<T>(node : Node<T>, f : (key : [Char], value : T) -> Bool) {

@@ -1,6 +1,8 @@
 import Prim "mo:⛔";
 
+import Char "../Char";
 import Compare "../Compare";
+import Result "../Result";
 import Stack "../Stack";
 
 module {
@@ -30,8 +32,32 @@ module {
     public module AST = {
         public let cf : Compare.Cf<AST> = func (x : AST, y : AST) : Int {
             switch (x, y) {
-                case (#Group(x), #Group(y)) Group.cf(x, y);
-                case (_) 0; // TODO!
+                case (#Empty(x)      , #Empty(y))       Span.cf(x, y);
+                case (#Flags(x)      , #Flags(y))       SetFlags.cf(x, y);
+                case (#Literal(x)    , #Literal(y))     Literal.cf(x, y);
+                case (#Dot(x)        , #Dot(y))         Span.cf(x, y);
+                case (#Assertion(x)  , #Assertion(y))   Assertion.cf(x, y);
+                case (#Class(x)      , #Class(y))       Class.cf(x, y);
+                case (#Repetition(x) , #Repetition(y))  Repetition.cf(x, y);
+                case (#Group(x)      , #Group(y))       Group.cf(x, y);
+                case (#Alternation(x), #Alternation(y)) Alternation.cf(x, y);
+                case (#Concat(x)     , #Concat(y))      Concat.cf(x, y);
+                case (_) -1; 
+            };
+        };
+
+        public func span(ast : AST) : Span {
+            switch (ast) {
+                case (#Empty(span))    span;
+                case (#Flags(e))       e.span;
+                case (#Literal(e))     e.span;
+                case (#Dot(span))      span;
+                case (#Assertion(e))   e.span;
+                case (#Class(e))       Class.span(e);
+                case (#Repetition(e))  e.span;
+                case (#Group(e))       e.span;
+                case (#Alternation(e)) e.span;
+                case (#Concat(e))      e.span;
             };
         };
     };
@@ -51,6 +77,24 @@ module {
                 case (0) Span.cf(x.span, y.span);
                 case (n) n;
             };
+        };
+
+        public func transform<T>(
+            r    : Result.Result<T, Error>,
+            from : ErrorKind,
+            to   : ErrorKind
+        ) : Result.Result<T, Error> {
+            switch (r) {
+                case (#err(e)) {
+                    if (ErrorKind.cf(e.kind, from) == 0) return #err({
+                        kind    = to;
+                        pattern = e.pattern;
+                        span    = e.span;
+                    });
+                };
+                case (_) {};
+            };
+            r;
         };
     };
 
@@ -78,8 +122,12 @@ module {
         };
 
         #RepetitionMissing;
+        #RepetitionCountUnclosed;
+        #RepetitionCountInvalid;
 
         #UnsupportedLookAround;
+
+        #DecimalEmpty;
 
         #TODO
     };
@@ -149,15 +197,53 @@ module {
         asts : [AST];
     };
 
+    public module Alternation = {
+        public let cf : Compare.Cf<Alternation> = func (x : Alternation, y : Alternation) : Int {
+            switch (Span.cf(x.span, y.span)) {
+                case (0) {
+                    let xS = x.asts.size();
+                    let yS = y.asts.size();
+                    if (xS != yS) return xS - yS;
+                    for (k in x.asts.keys()) {
+                        switch (AST.cf(x.asts[k], y.asts[k])) {
+                            case (0) {};
+                            case (n) return n;
+                        };
+                    };
+                    0;
+                };
+                case (n) n;
+            };
+        };
+    };
+
     public type Concat = {
         span : Span;
         asts : [AST];
     };
 
     public module Concat = {
+        public let cf : Compare.Cf<Concat> = func (x : Concat, y : Concat) : Int {
+            switch (Span.cf(x.span, y.span)) {
+                case (0) {
+                    let xS = x.asts.size();
+                    let yS = y.asts.size();
+                    if (xS != yS) return xS - yS;
+                    for (k in x.asts.keys()) {
+                        switch (AST.cf(x.asts[k], y.asts[k])) {
+                            case (0) {};
+                            case (n) return n;
+                        };
+                    };
+                    0;
+                };
+                case (n) n;
+            };
+        };
+
         public func mut(c : Concat) : ConcatVar = {
             var span = c.span;
-            var asts = Stack.init<AST>(16);
+            asts     = Stack.init<AST>(16);
         };
 
         public func toAST(c : Concat) : AST {
@@ -171,10 +257,15 @@ module {
 
     public type ConcatVar = {
         var span : Span;
-        var asts : Stack.Stack<AST>;
+        asts     : Stack.Stack<AST>;
     };
 
     public module ConcatVar = {
+        public func new(span : Span) : ConcatVar = {
+            var span = span;
+            asts = Stack.init<AST>(16);
+        };
+
         public func mut(c : ConcatVar) : Concat = {
             span = c.span;
             asts = Stack.toArray(c.asts);
@@ -196,6 +287,16 @@ module {
             kind = #Verbatim;
             c;
         };
+
+        public let cf : Compare.Cf<Literal> = func (x : Literal, y : Literal) : Int {
+            switch (Span.cf(x.span, y.span)) {
+                case (0) switch (LiteralKind.cf(x.kind, y.kind)) {
+                    case (0) Char.toNat(x.c) - Char.toNat(y.c);
+                    case (n) n;
+                };
+                case (n) n;
+            };
+        };
     };
 
     public type LiteralKind = {
@@ -207,20 +308,73 @@ module {
         #Special  : SpecialLiteralKind;
     };
 
+    public module LiteralKind = {
+        public let cf : Compare.Cf<LiteralKind> = func (x : LiteralKind, y : LiteralKind) : Int {
+            switch (x, y) {
+                case (#HexFixed(x), #HexFixed(y)) HexLiteralKind.cf(x, y);
+                case (#HexBrace(x), #HexBrace(y)) HexLiteralKind.cf(x, y);
+                case (#Special(x) , #Special(y))  SpecialLiteralKind.cf(x, y);
+                case (_) {
+                    if (x == y) return 0;
+                    -1;
+                };
+            };
+        };
+    };
+
     public type HexLiteralKind = {
         #X;
         #UnicodeShort;
         #UnicodeLong;
     };
+    
+    public module HexLiteralKind = {
+        public let cf : Compare.Cf<HexLiteralKind> = func (x : HexLiteralKind, y : HexLiteralKind) : Int {
+            if (x == y) return 0;
+            return -1;
+        };
+    };
 
     public type SpecialLiteralKind = {
-        #Bell; #FormFeed; #Tab; #LineFeed; #CarriageReturn; #VerticalTab; #Space;
+        #Bell;
+        #FormFeed;
+        #Tab;
+        #LineFeed;
+        #CarriageReturn;
+        #VerticalTab;
+        #Space;
+    };
+
+    public module SpecialLiteralKind = {
+        public let cf : Compare.Cf<SpecialLiteralKind> = func (x : SpecialLiteralKind, y : SpecialLiteralKind) : Int {
+            if (x == y) return 0;
+            return -1;
+        };
     };
 
     public type Class = {
         #Unicode   : ClassUnicode;
         #Perl      : ClassPerl;
         #Bracketed : ClassBracketed;
+    };
+
+    public module Class = {
+        public let cf : Compare.Cf<Class> = func (x : Class, y : Class) : Int {
+            switch (x, y) {
+                case (#Unicode(x)  , #Unicode(y))   ClassUnicode.cf(x, y);
+                case (#Perl(x)     , #Perl(y))      ClassPerl.cf(x, y);
+                case (#Bracketed(x), #Bracketed(y)) ClassBracketed.cf(x, y);
+                case (_) -1;
+            };
+        };
+
+        public func span(c : Class) : Span {
+            switch (c) {
+                case (#Unicode(e))   e.span;
+                case (#Perl(e))      e.span;
+                case (#Bracketed(e)) e.span;
+            };
+        };
     };
 
     public type ClassType<T> = {
@@ -230,6 +384,21 @@ module {
     };
 
     public type ClassUnicode = ClassType<ClassUnicodeKind>;
+
+    public module ClassUnicode = {
+        public let cf : Compare.Cf<ClassUnicode> = func (x : ClassUnicode, y : ClassUnicode) : Int {
+            switch (Span.cf(x.span, y.span)) {
+                case (0) switch (ClassUnicodeKind.cf(x.kind, y.kind)) {
+                    case (0) {
+                        if (x.negated == y.negated) return 0;
+                        -1;
+                    };
+                    case (n) n;
+                };
+                case (n) n;
+            };
+        };
+    };
 
     public type ClassUnicodeKind = {
         #OneLetter  : Char;
@@ -241,28 +410,144 @@ module {
         };
     };
 
+    public module ClassUnicodeKind = {
+        public let cf : Compare.Cf<ClassUnicodeKind> = func (x : ClassUnicodeKind, y : ClassUnicodeKind) : Int {
+            switch (x, y) {
+                case (#OneLetter(x), #OneLetter(y)) Char.toNat(x) - Char.toNat(y);
+                case (#Named(x)    , #Named(y)) {
+                    // TODO: lexical cmp.
+                    if (x == y) return 0;
+                    -1;
+                };
+                case (#NamedValue(x), #NamedValue(y)) {
+                    switch (ClassUnicodeOpKind.cf(x.op, y.op)) {
+                        case (0) {
+                            if (x.name != y.name)   return -1;
+                            if (x.value != x.value) return -1;
+                            0;
+                        };
+                        case (n) n;
+                    }
+                };
+                case (_) -1;
+            }
+        };
+    };
+
     public type ClassUnicodeOpKind = {
-        #Equal; #Colon; #NotEqual;
+        #Equal;
+        #Colon;
+        #NotEqual;
+    };
+
+    public module ClassUnicodeOpKind = {
+        public let cf : Compare.Cf<ClassUnicodeOpKind> = func (x : ClassUnicodeOpKind, y : ClassUnicodeOpKind) : Int {
+            if (x == y) return 0;
+            return -1;
+        };
     };
 
     public type ClassAscii = ClassType<ClassAsciiKind>;
 
+    public module ClassAscii = {
+        public let cf : Compare.Cf<ClassAscii> = func (x : ClassAscii, y : ClassAscii) : Int {
+            switch (Span.cf(x.span, y.span)) {
+                case (0) switch (ClassAsciiKind.cf(x.kind, y.kind)) {
+                    case (0) {
+                        if (x.negated == y.negated) return 0;
+                        -1;
+                    };
+                    case (n) n;
+                };
+                case (n) n;
+            };
+        };
+    };
+
     public type ClassAsciiKind = {
-        #Alnum; #Alpha; #Ascii; #Blank; #Cntrl; #Digit; #Graph; #Lower;
-        #Print; #Punct; #Space; #Upper; #Word; #Xdigit;
+        #Alnum;
+        #Alpha;
+        #Ascii;
+        #Blank;
+        #Cntrl;
+        #Digit;
+        #Graph;
+        #Lower;
+        #Print;
+        #Punct;
+        #Space;
+        #Upper;
+        #Word;
+        #Xdigit;
+    };
+
+    public module ClassAsciiKind = {
+        public let cf : Compare.Cf<ClassAsciiKind> = func (x : ClassAsciiKind, y : ClassAsciiKind) : Int {
+            if (x == y) return 0;
+            return -1;
+        };
     };
 
     public type ClassPerl = ClassType<ClassPerlKind>;
 
+    public module ClassPerl = {
+        public let cf : Compare.Cf<ClassPerl> = func (x : ClassPerl, y : ClassPerl) : Int {
+            switch (Span.cf(x.span, y.span)) {
+                case (0) switch (ClassPerlKind.cf(x.kind, y.kind)) {
+                    case (0) {
+                        if (x.negated == y.negated) return 0;
+                        -1;
+                    };
+                    case (n) n;
+                };
+                case (n) n;
+            };
+        };
+    };
+
     public type ClassPerlKind = {
-        #Digit; #Space; #Word;
+        #Digit;
+        #Space;
+        #Word;
+    };
+
+    public module ClassPerlKind = {
+        public let cf : Compare.Cf<ClassPerlKind> = func (x : ClassPerlKind, y : ClassPerlKind) : Int {
+            if (x == y) return 0;
+            return -1;
+        };
     };
 
     public type ClassBracketed = ClassType<ClassSet>;
 
+    public module ClassBracketed = {
+        public let cf : Compare.Cf<ClassBracketed> = func (x : ClassBracketed, y : ClassBracketed) : Int {
+            switch (Span.cf(x.span, y.span)) {
+                case (0) switch (ClassSet.cf(x.kind, y.kind)) {
+                    case (0) {
+                        if (x.negated == y.negated) return 0;
+                        -1;
+                    };
+                    case (n) n;
+                };
+                case (n) n;
+            };
+        };
+    };
+
     public type ClassSet = {
         #Item     : ClassSetItem;
         #BinaryOp : ClassSetBinaryOp;
+    };
+
+    public module ClassSet = {
+        public let cf : Compare.Cf<ClassSet> = func (x : ClassSet, y : ClassSet) : Int {
+            switch (x, y) {
+                case (#Item(x)    , #Item(y))     ClassSetItem.cf(x, y);
+                case (#BinaryOp(x), #BinaryOp(y)) ClassSetBinaryOp.cf(x, y);
+                case (_) -1;
+            };
+        };
     };
 
     public type ClassSetItem = {
@@ -276,15 +561,65 @@ module {
         #Union     : ClassSetUnion;
     };
 
+    public module ClassSetItem = {
+        public let cf : Compare.Cf<ClassSetItem> = func (x : ClassSetItem, y : ClassSetItem) : Int {
+            switch (x, y) {
+                case (#Empty(x)    , #Empty(y))     Span.cf(x, y);
+                case (#Literal(x)  , #Literal(y))   Literal.cf(x, y);
+                case (#Range(x)    , #Range(y))     ClassSetRange.cf(x, y);
+                case (#Ascii(x)    , #Ascii(y))     ClassAscii.cf(x, y);
+                case (#Unicode(x)  , #Unicode(y))   ClassUnicode.cf(x, y);
+                case (#Perl(x)     , #Perl(y))      ClassPerl.cf(x, y);
+                case (#Bracketed(x), #Bracketed(y)) ClassBracketed.cf(x, y);
+                case (#Union(x)    , #Union(y))     ClassSetUnion.cf(x, y);
+                case (_) -1;
+            };
+        };
+    };
+
     public type ClassSetRange = {
         span  : Span;
         start : Literal;
         end   : Literal;
     };
 
+    public module ClassSetRange = {
+        public let cf : Compare.Cf<ClassSetRange> = func (x : ClassSetRange, y : ClassSetRange) : Int {
+            switch (Span.cf(x.span, y.span)) {
+                case (0) {
+                    // TODO: lexical cmp.
+                    if (x.start != y.start) return -1;
+                    if (x.end != y.end)     return -1;
+                    0;
+                };
+                case (n) n;
+            };
+        };
+    };
+
     public type ClassSetUnion = {
         span  : Span;
         items : [ClassSetItem];
+    };
+
+    public module ClassSetUnion = {
+        public let cf : Compare.Cf<ClassSetUnion> = func (x : ClassSetUnion, y : ClassSetUnion) : Int {
+            switch (Span.cf(x.span, y.span)) {
+                case (0) {
+                    let xS = x.items.size();
+                    let yS = y.items.size();
+                    if (xS != yS) return xS - yS;
+                    for (k in x.items.keys()) {
+                        switch (ClassSetItem.cf(x.items[k], y.items[k])) {
+                            case (0) {};
+                            case (n) return n;
+                        };
+                    };
+                    0;
+                };
+                case (n) n;
+            };
+        };
     };
 
     public type ClassSetBinaryOp = {
@@ -294,8 +629,32 @@ module {
         rhs  : ClassSet;
     };
 
+    public module ClassSetBinaryOp = {
+        public let cf : Compare.Cf<ClassSetBinaryOp> = func (x : ClassSetBinaryOp, y : ClassSetBinaryOp) : Int {
+            switch (Span.cf(x.span, y.span)) {
+                case (0) switch (ClassSetBinaryOpKind.cf(x.kind, y.kind)) {
+                    case (0) switch (ClassSet.cf(x.lhs, y.lhs)) {
+                        case (0) ClassSet.cf(x.rhs, y.rhs);
+                        case (n) n;
+                    };
+                    case (n) n;
+                };
+                case (n) n;
+            };
+        };
+    };
+
     public type ClassSetBinaryOpKind = {
-        #Intersection; #Difference; #SymmetricDifference;
+        #Intersection;
+        #Difference;
+        #SymmetricDifference;
+    };
+
+    public module ClassSetBinaryOpKind = {
+        public let cf : Compare.Cf<ClassSetBinaryOpKind> = func (x : ClassSetBinaryOpKind, y : ClassSetBinaryOpKind) : Int {
+            if (x == y) return 0;
+            -1;
+        };
     };
 
     public type Assertion = {
@@ -303,8 +662,29 @@ module {
         kind : AssertionKind;
     };
 
+    public module Assertion = {
+        public let cf : Compare.Cf<Assertion> = func (x : Assertion, y : Assertion) : Int {
+            switch (Span.cf(x.span, y.span)) {
+                case (0) AssertionKind.cf(x.kind, y.kind);
+                case (n) n;
+            };
+        };
+    };
+
     public type AssertionKind = {
-        #StartLine; #EndLine; #StartText; #EndText; #WordBoundary; #NotWordBoundary;
+        #StartLine;
+        #EndLine;
+        #StartText;
+        #EndText;
+        #WordBoundary;
+        #NotWordBoundary;
+    };
+
+    public module AssertionKind = {
+        public let cf : Compare.Cf<AssertionKind> = func (x : AssertionKind, y : AssertionKind) : Int {
+            if (x == y) return 0;
+            -1;
+        };
     };
 
     public type Repetition = {
@@ -314,9 +694,33 @@ module {
         ast    : AST;
     };
 
+    public module Repetition = {
+        public let cf : Compare.Cf<Repetition> = func (x : Repetition, y : Repetition) : Int {
+            switch (Span.cf(x.span, y.span)) {
+                case (0) switch (RepetitionOp.cf(x.op, y.op)) {
+                    case (0) {
+                        if (x.greedy != y.greedy) return -1;
+                        AST.cf(x.ast, y.ast);
+                    };
+                    case (n) n;
+                };
+                case (n) n;
+            };
+        };
+    };
+
     public type RepetitionOp = {
         span : Span;
         kind : RepetitionKind;
+    };
+
+    public module RepetitionOp = {
+        public let cf : Compare.Cf<RepetitionOp> = func (x : RepetitionOp, y : RepetitionOp) : Int {
+            switch (Span.cf(x.span, y.span)) {
+                case (0) RepetitionKind.cf(x.kind, y.kind);
+                case (n) n;
+            };
+        };
     };
 
     public type RepetitionKind = {
@@ -324,10 +728,46 @@ module {
         #Range : RepetitionRange;
     };
 
+    public module RepetitionKind = {
+        public let cf : Compare.Cf<RepetitionKind> = func (x : RepetitionKind, y : RepetitionKind) : Int {
+            switch (x, y) {
+                case (#Range(x)  , #Range(y))   RepetitionRange.cf(x, y);
+                case (#ZeroOrOne , #ZeroOrOne)  0;
+                case (#ZeroOrMore, #ZeroOrMore) 0;
+                case (#OneOrMore , #OneOrMore)  0;
+                case (_) -1;
+            };
+        };
+    };
+
     public type RepetitionRange = {
         #Exactly : Nat32;
         #AtLeast : Nat32;
         #Bounded : (Nat32, Nat32);
+    };
+
+    public module RepetitionRange = {
+        public func isValid(r : RepetitionRange) : Bool {
+            switch (r) {
+                case (#Bounded(m, n)) n >= m;
+                case (_)              true;
+            };
+        };
+
+        public let cf : Compare.Cf<RepetitionRange> = func (x : RepetitionRange, y : RepetitionRange) : Int {
+            switch (x, y) {
+                case (#Exactly(x), #Exactly(y)) Prim.nat32ToNat(x) - Prim.nat32ToNat(y);
+                case (#AtLeast(x), #AtLeast(y)) Prim.nat32ToNat(x) - Prim.nat32ToNat(y);
+                case (#Bounded(x), #Bounded(y)) {
+                    let n : Int = Prim.nat32ToNat(x.0) - Prim.nat32ToNat(y.0);
+                    switch (n) {
+                        case (0) Prim.nat32ToNat(x.1) - Prim.nat32ToNat(y.1);
+                        case (n) n;
+                    };
+                };
+                case (_) -1;
+            };
+        };
     };
 
     public type Group = {
@@ -379,12 +819,8 @@ module {
     public module GroupKind = {
         public let cf : Compare.Cf<GroupKind> = func (x : GroupKind, y : GroupKind) : Int {
             switch (x, y) {
-                case (#CaptureIndex(x), #CaptureIndex(y)) { Prim.nat32ToNat(x) - Prim.nat32ToNat(y) };
-                case (#CaptureName(x), #CaptureName(y)) {
-                    // TODO: lexical cf?
-                    if (x == y) return 0;
-                    -1;
-                };
+                case (#CaptureIndex(x), #CaptureIndex(y)) Prim.nat32ToNat(x) - Prim.nat32ToNat(y);
+                case (#CaptureName(x) , #CaptureName(y))  CaptureName.cf(x, y);
                 case (#NonCapturing(x), #NonCapturing(y)) Flags.cf(x, y);
                 case (_) { -1 };
             };
@@ -465,10 +901,7 @@ module {
 
         public let cf : Compare.Cf<FlagsItem> = func (x : FlagsItem, y : FlagsItem) : Int {
             switch (Span.cf(x.span, y.span)) {
-                case (0) switch (x.kind == y.kind) {
-                    case (true)  { 0 };
-                    case (false) { -1 };
-                };
+                case (0) FlagsItemKind.cf(x.kind, y.kind);
                 case (n) n;
             };
         };
@@ -482,20 +915,26 @@ module {
     public module FlagsItemKind = {
         public let cf : Compare.Cf<FlagsItemKind> = func (x : FlagsItemKind, y : FlagsItemKind) : Int {
             switch (x, y) {
-                case (#Flag(x), #Flag(y)) {
-                    if (x == y) return 0;
-                    -1;
-                };
-                case (_) {
-                    if (x == y) return 0;
-                    -1;
-                };
+                case (#Flag(x) , #Flag(y))  Flag.cf(x, y);
+                case (#Negation, #Negation) 0;
+                case (_) -1;
             }
         };
     };
 
     public type Flag = {
-        #CaseInsensitive; #MultiLine; #DotMatchesNewLine;
-        #SwapGreed; #Unicode; #IgnoreWhitespace;
+        #CaseInsensitive;
+        #MultiLine;
+        #DotMatchesNewLine;
+        #SwapGreed;
+        #Unicode;
+        #IgnoreWhitespace;
+    };
+
+    public module Flag = {
+        public let cf : Compare.Cf<Flag> = func (x : Flag, y : Flag) : Int {
+            if (x == y) return 0;
+            -1;
+        };
     };
 };

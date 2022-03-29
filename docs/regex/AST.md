@@ -17,7 +17,7 @@
 
 
 ## Type `ErrorKind`
-`type ErrorKind = {#GroupNameEmpty; #GroupNameInvalid; #GroupNameDuplicate; #GroupNameUnexpectedEOF; #GroupUnclosed; #GroupUnopened; #EscapeUnexpectedEOF; #UnsupportedBackReference; #GroupsEmpty; #FlagUnrecognized; #FlagDanglingNegation; #FlagRepeatedNegation : { original : Span }; #FlagUnexpectedEOF; #FlagDuplicate : { original : Span }; #RepetitionMissing; #UnsupportedLookAround; #TODO}`
+`type ErrorKind = {#GroupNameEmpty; #GroupNameInvalid; #GroupNameDuplicate; #GroupNameUnexpectedEOF; #GroupUnclosed; #GroupUnopened; #EscapeUnexpectedEOF; #UnsupportedBackReference; #GroupsEmpty; #FlagUnrecognized; #FlagDanglingNegation; #FlagRepeatedNegation : { original : Span }; #FlagUnexpectedEOF; #FlagDuplicate : { original : Span }; #RepetitionMissing; #RepetitionCountUnclosed; #RepetitionCountInvalid; #UnsupportedLookAround; #DecimalEmpty; #TODO}`
 
 
 ## Value `ErrorKind`
@@ -57,7 +57,7 @@
 
 
 ## Type `ConcatVar`
-`type ConcatVar = { var span : Span; var asts : Stack.Stack<AST> }`
+`type ConcatVar = { var span : Span; asts : Stack.Stack<AST> }`
 
 
 ## Value `ConcatVar`
@@ -86,6 +86,10 @@
 
 ## Type `Class`
 `type Class = {#Unicode : ClassUnicode; #Perl : ClassPerl; #Bracketed : ClassBracketed}`
+
+
+## Value `Class`
+`let Class`
 
 
 ## Type `ClassType`
@@ -170,6 +174,10 @@
 
 ## Type `RepetitionRange`
 `type RepetitionRange = {#Exactly : Nat32; #AtLeast : Nat32; #Bounded : (Nat32, Nat32)}`
+
+
+## Value `RepetitionRange`
+`let RepetitionRange`
 
 
 ## Type `Group`
