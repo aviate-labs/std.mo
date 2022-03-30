@@ -38,14 +38,11 @@ module {
     };
 
     private type GroupState = {
-        #Group : {
-            concat : AST.Concat;
-            group  : AST.Group;
-        };
-        #Alternation : AST.Alternation;
+        #Group       : GroupStateGroup;
+        #Alternation : AST.AlternationVar;
     };
 
-    private type GroupStateVar = {
+    private type GroupStateGroup = {
         concat : AST.ConcatVar;
         group  : AST.GroupVar;
     };
@@ -172,8 +169,8 @@ module {
                 case (#ok(#right(group))) {
                     // TODO: set group flags?
                     Stack.push(groups, #Group({
-                        concat = AST.ConcatVar.mut(concat);
-                        group;
+                        concat;
+                        group = AST.Group.mut(group);
                     }));
                     #ok(AST.ConcatVar.new(span()));
                 };
@@ -182,18 +179,27 @@ module {
 
         public func popGroup(concat : AST.ConcatVar) : Result<AST.ConcatVar> {
             assert(char() == ')');
-            let { group; concat = prior } : GroupStateVar = switch (Stack.pop(groups)) {
+            let ({ group; concat = prior }, alt) : (GroupStateGroup, ?AST.AlternationVar) = switch (Stack.pop(groups)) {
                 case (null) return #err(err(#GroupUnopened, spanChar()));
-                case (? #Alternation(_)) return #err(err(#TODO, span()));
-                case (? #Group(g)) {{
-                    group  = AST.Group.mut(g.group);
-                    concat = AST.Concat.mut(g.concat);
-                }};
+                case (? #Alternation(alt)) switch (Stack.pop(groups)) {
+                    case (? #Group(g)) (g, ?alt);
+                    case (_) return #err(err(#GroupUnopened, spanChar()));
+                };
+                case (? #Group(g)) (g, null);
             };
             concat.span := AST.Span.withEnd(concat.span, pos());
             ignore bump();
             group.span := AST.Span.withEnd(group.span, pos());
-            group.ast  := AST.Concat.toAST(AST.ConcatVar.mut(concat));
+            switch (alt) {
+                case (? alt) {
+                    alt.span := AST.Span.withEnd(alt.span, group.span.end);
+                    Stack.push(alt.asts, AST.Concat.toAST(AST.ConcatVar.mut(concat)));
+                    group.ast := AST.Alternation.toAST(AST.AlternationVar.mut(alt));
+                };
+                case (null) {
+                    group.ast := AST.Concat.toAST(AST.ConcatVar.mut(concat));
+                };
+            };
             Stack.push(prior.asts, #Group(AST.GroupVar.mut(group)));
             #ok(prior);
         };
@@ -202,12 +208,16 @@ module {
             concat.span := AST.Span.withEnd(concat.span, pos());
             let ast = switch (Stack.pop(groups)) {
                 case (null) #ok(AST.Concat.toAST(AST.ConcatVar.mut(concat)));
-                case (? #Alternation(_)) return #err(err(#TODO, span()));
+                case (? #Alternation(alt)) {
+                    alt.span := AST.Span.withEnd(alt.span, pos());
+                    Stack.push(alt.asts, AST.Concat.toAST(AST.ConcatVar.mut(concat)));
+                    #ok(#Alternation(AST.AlternationVar.mut(alt)));
+                };
                 case (? #Group(g)) return #err(err(#GroupUnclosed, g.group.span));
             };
             switch (Stack.pop(groups)) {
                 case (null) ast;
-                case (? #Alternation(_)) return #err(err(#TODO, span()));
+                case (? #Alternation(_)) { assert(false); loop {} }; // unreachable!
                 case (? #Group(g)) return #err(err(#GroupUnclosed, g.group.span));
             };
         };
@@ -329,6 +339,28 @@ module {
                 case ('u') #ok(#Unicode);
                 case ('x') #ok(#IgnoreWhitespace);
                 case (_) #err(err(#FlagUnrecognized, spanChar()))
+            };
+        };
+
+        public func pushAlternation(concat : AST.ConcatVar) : Result<AST.ConcatVar> {
+            assert(char() == '|');
+            concat.span := AST.Span.withEnd(concat.span, pos());
+            pushOrAddAlternation(AST.ConcatVar.mut(concat));
+            ignore bump();
+            #ok(AST.ConcatVar.new(span()));
+        };
+
+        public func pushOrAddAlternation(concat : AST.Concat) {
+            let ast = AST.Concat.toAST(concat);
+            switch (Stack.last(groups)) {
+                case (? #Alternation(alts)) {
+                    Stack.push(alts.asts, ast);
+                };
+                case (_) {
+                    let alt = AST.AlternationVar.new(AST.Span.withEnd(concat.span, pos()));
+                    Stack.push(alt.asts, ast);
+                    Stack.push(groups, #Alternation(alt));
+                };
             };
         };
 
@@ -475,6 +507,10 @@ module {
                         case (#ok(c)) { concat := c };
                     };
                     case (')') switch (popGroup(concat)) {
+                        case (#err(e)) return #err(e);
+                        case (#ok(c)) { concat := c };
+                    };
+                    case ('|') switch (pushAlternation(concat)) {
                         case (#err(e)) return #err(e);
                         case (#ok(c)) { concat := c };
                     };

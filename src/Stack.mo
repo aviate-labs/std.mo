@@ -67,11 +67,17 @@ module Stack {
         b.size       += 1;
     };
 
-    // Removes the last value from the stack and returns it.
+    /// Removes the last value from the stack and returns it.
     public func pop<T>(b : Stack<T>) : ?T {
         if (b.size == 0) return null;
         b.size -= 1;
         ?b.xs[b.size];
+    };
+
+    /// Returns the last value from the stack without removing it.
+    public func last<T>(b : Stack<T>) : ?T {
+        if (b.size == 0) return null;
+        ?b.xs[b.size - 1];
     };
 
     /// Extracts an array from the stack.

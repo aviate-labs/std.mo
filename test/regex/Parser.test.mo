@@ -64,7 +64,10 @@ module Check = {
 
     public func ast(r : Parser.Result<AST.AST>, ast : AST.AST) : Bool {
         switch (r) {
-            case (#err(_)) false;
+            case (#err(e)) {
+                Prim.debugPrint(debug_show("ERR", e));
+                false;
+            };
             case (#ok(e))  switch (AST.AST.cf(e, ast)) {
                 case (0) true;
                 case (_) {
@@ -535,6 +538,36 @@ suite.run([
             it("a{", func () : Bool {
                 let p = Parser.Parser("a{");
                 Check.astErr(p.parse(), AST.Error.new(#RepetitionCountUnclosed, span(1, 2)));
+            }),
+        ]),
+        describe("Alternation", [
+            it("a|b|c", func () : Bool {
+                let p = Parser.Parser("a|b|c");
+                Check.ast(
+                    p.parse(),
+                    #Alternation({
+                        span = span(0, 5);
+                        asts = [
+                            #Literal(AST.Literal.new(0, 'a')),
+                            #Literal(AST.Literal.new(2, 'b')),
+                            #Literal(AST.Literal.new(4, 'c'))
+                        ];
+                    })
+                );
+            }),
+            it("||", func () : Bool {
+                let p = Parser.Parser("||");
+                Check.ast(
+                    p.parse(),
+                    #Alternation({
+                        span = span(0, 2);
+                        asts = [
+                            #Empty(span(0, 0)),
+                            #Empty(span(1, 1)),
+                            #Empty(span(2, 2))
+                        ];
+                    })
+                );
             }),
         ])
     ]),

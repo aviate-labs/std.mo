@@ -215,6 +215,31 @@ module {
                 case (n) n;
             };
         };
+
+        public func toAST(c : Alternation) : AST {
+            switch (c.asts.size()) {
+                case (0) #Empty(c.span);
+                case (1) c.asts[0];
+                case (_) #Alternation(c);
+            };
+        };
+    };
+
+    public type AlternationVar = {
+        var span : Span;
+        asts     : Stack.Stack<AST>;
+    };
+
+    public module AlternationVar = {
+        public func new(span : Span) : AlternationVar = {
+            var span = span;
+            asts = Stack.init<AST>(16);
+        };
+
+        public func mut(a : AlternationVar) : Alternation = {
+            span = a.span;
+            asts = Stack.toArray(a.asts);
+        };
     };
 
     public type Concat = {
@@ -724,7 +749,9 @@ module {
     };
 
     public type RepetitionKind = {
-        #ZeroOrOne; #ZeroOrMore; #OneOrMore;
+        #ZeroOrOne;
+        #ZeroOrMore;
+        #OneOrMore;
         #Range : RepetitionRange;
     };
 
