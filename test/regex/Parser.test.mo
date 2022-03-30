@@ -439,6 +439,103 @@ suite.run([
                 let p = Parser.Parser("(?:?)");
                 Check.astErr(p.parse(), AST.Error.new(#RepetitionMissing, span(3, 3)));
             }),
+        ]),
+        describe("Range", [
+            it("a{ 5 }", func () : Bool {
+                let p = Parser.Parser("a{5}");
+                Check.ast(
+                    p.parse(),
+                    #Repetition({
+                        span   = span(0, 4);
+                        op     = {
+                            span = span(1, 4);
+                            kind = #Range(#Exactly(5));   
+                        };
+                        greedy = true;
+                        ast    = #Literal(AST.Literal.new(0, 'a')) 
+                    })
+                )
+            }),
+            it("a{ 5 , }", func () : Bool {
+                let p = Parser.Parser("a{5,}");
+                Check.ast(
+                    p.parse(),
+                    #Repetition({
+                        span   = span(0, 5);
+                        op     = {
+                            span = span(1, 5);
+                            kind = #Range(#AtLeast(5));   
+                        };
+                        greedy = true;
+                        ast    = #Literal(AST.Literal.new(0, 'a')) 
+                    })
+                )
+            }),
+            it("a{ 5 , 9 }", func () : Bool {
+                let p = Parser.Parser("a{5,9}");
+                Check.ast(
+                    p.parse(),
+                    #Repetition({
+                        span   = span(0, 6);
+                        op     = {
+                            span = span(1, 6);
+                            kind = #Range(#Bounded(5, 9));   
+                        };
+                        greedy = true;
+                        ast    = #Literal(AST.Literal.new(0, 'a')) 
+                    })
+                )
+            }),
+            it("a{5} ?", func () : Bool {
+                let p = Parser.Parser("a{5}?");
+                Check.ast(
+                    p.parse(),
+                    #Repetition({
+                        span   = span(0, 5);
+                        op     = {
+                            span = span(1, 5);
+                            kind = #Range(#Exactly(5));   
+                        };
+                        greedy = false;
+                        ast    = #Literal(AST.Literal.new(0, 'a')) 
+                    })
+                )
+            }),
+            it("ab{5}c", func () : Bool {
+                let p = Parser.Parser("ab{5}c");
+                Check.ast(
+                    p.parse(),
+                    #Concat({
+                        span = span(0, 6);
+                        asts = [
+                            #Literal(AST.Literal.new(0, 'a')),
+                            #Repetition({
+                                span   = span(1, 5);
+                                op     = {
+                                    span = span(2, 5);
+                                    kind = #Range(#Exactly(5));   
+                                };
+                                greedy = true;
+                                ast    = #Literal(AST.Literal.new(1, 'b')) 
+                            }),
+                            #Literal(AST.Literal.new(5, 'c'))
+                        ];
+                    })
+                )
+            }),
+
+            it("(?i){0}", func () : Bool {
+                let p = Parser.Parser("(?i){0}");
+                Check.astErr(p.parse(), AST.Error.new(#RepetitionMissing, span(4, 4)));
+            }),
+            it("a{}", func () : Bool {
+                let p = Parser.Parser("a{}");
+                Check.astErr(p.parse(), AST.Error.new(#DecimalEmpty, span(2, 2)));
+            }),
+            it("a{", func () : Bool {
+                let p = Parser.Parser("a{");
+                Check.astErr(p.parse(), AST.Error.new(#RepetitionCountUnclosed, span(1, 2)));
+            }),
         ])
     ]),
 ]);
