@@ -1,6 +1,7 @@
 import Array "var/Array";
 import Compare "Compare";
 import Iterator "Iterator";
+import List "List";
 
 module {
     public let INITIAL_CAPACITY = 16;
@@ -8,7 +9,7 @@ module {
     public type Map<K, V> = {
         keyType     : KeyType<K>;
         var count   : Nat;
-        var buckets : [var ?Entry<K, V>];
+        var buckets : [var List.KeyValue<K, V>];
     };
 
     /// Creates an empty Map object.
@@ -37,7 +38,7 @@ module {
         switch (map.buckets[p]) {
             case (null) null;
             case (? bucket) {
-                let (new, ov) = setEntry<K, V>(map.keyType, bucket, k, null);
+                let (new, ov) = List.KeyValue.set(?bucket, k, null, map.keyType.eq);
                 map.buckets[p] := new;
                 switch (ov) {
                     case (null) {};
@@ -53,7 +54,7 @@ module {
         let size = map.buckets.size();
         if (size == 0 or map.count == 0) return null;
         let p = map.keyType.hash(k, size);
-        findEntry<K, V>(map.keyType, map.buckets[p], k);
+        List.KeyValue.find<K, V>(map.buckets[p], k, map.keyType.eq);
     };
 
     // Returns a boolean asserting whether a value has been associated to the key in the Map object or not.
@@ -71,15 +72,14 @@ module {
         switch (map.buckets[p]) {
             case (null) {
                 map.buckets[p] := ?{
-                    key      = k;
-                    value    = v;
+                    value    = (k, v);
                     var next = null;
                 };
                 map.count += 1;
                 null;
             };
             case (? bucket) {
-                let (new, ov) = setEntry<K, V>(map.keyType, bucket, k, ?v);
+                let (new, ov) = List.KeyValue.set<K, V>(?bucket, k, ?v, map.keyType.eq);
                 map.buckets[p] := new;
                 switch (ov) {
                     case (null) { map.count += 1 };
@@ -120,7 +120,7 @@ module {
                     };
                     case (? bucket) {
                         current := bucket.next;
-                        ?(bucket.key, bucket.value);
+                        ?bucket.value;
                     };
                 };
             };
@@ -135,7 +135,7 @@ module {
                 case (0) INITIAL_CAPACITY;
                 case (_) _size * 2;
             };
-            let new = Array.init<?Entry<K, V>>(size, null);
+            let new = Array.init<List.KeyValue<K, V>>(size, null);
             // NOTE: this can be VERY expensive!
             for (k in map.buckets.keys()) {
                 var bucket = map.buckets[k];
@@ -143,9 +143,9 @@ module {
                     switch (bucket) {
                         case (null) break l;
                         case (? e) {
-                            let p : Nat = map.keyType.hash(e.key, size);
+                            let (k, v) = e.value;
+                            let p : Nat = map.keyType.hash(k, size);
                             new[p] := ?{ 
-                                key      = e.key; 
                                 value    = e.value;
                                 var next = new[p];
                             };
@@ -158,81 +158,6 @@ module {
             return size;
         };
         _size;
-    };
-
-    public type Entry<K, V> = {
-        key       : K;
-        value     : V;
-        var next  : ?Entry<K, V>;
-    };
-
-    private func findEntry<K, V>(keyType : KeyType<K>, bucket : ?Entry<K, V>, k : K) : ?V {
-        var current : ?Entry<K, V> = bucket;
-        loop {
-            switch (current) {
-                case (null) return null;
-                case (? bucket) {
-                    if (keyType.eq(bucket.key, k)) {
-                        return ?bucket.value;
-                    };
-                    current := bucket.next;
-                };
-            };
-        };
-    };
-
-    /// Sets the entry to the given value, returns the new root and overwritten value.
-    private func setEntry<K, V>(keyType : KeyType<K>, bucket : Entry<K, V>, k : K, v : ?V) : (?Entry<K, V>, ?V) {
-        if (keyType.eq(bucket.key, k)) {
-            return switch (v) {
-                case (null) (bucket.next, ?bucket.value);
-                case (? v) (?{
-                    key      = k;
-                    value    = v;
-                    var next = bucket.next;
-                }, ?bucket.value);
-            };
-        };
-        // The last entry that was checked for the given key-value pair.
-        var last : Entry<K, V> = bucket;
-        loop {
-            switch (last.next) {
-                case (null) {
-                    // No next value, if v is not null, we can append.
-                    switch (v) {
-                        case (null) {};
-                        case (? v) {
-                            last.next := ?{
-                                key      = k;
-                                value    = v;
-                                var next = null;
-                            };
-                        };
-                    };
-                    return (?bucket, null)
-                };
-                case (? next) {
-                    if (keyType.eq(next.key, k)) {
-                        switch (v) {
-                            case (null) {
-                                // Remove entry.
-                                last.next := next.next;
-                            };
-                            case (? v) {
-                                // Overwrite entry.
-                                last.next := ?{
-                                    key      = k;
-                                    value    = v;
-                                    var next = next.next;
-                                };
-                            };
-                        };
-                        return (?bucket, ?next.value);
-                    };
-                    last := next;
-                };
-            };
-        };
     };
 
     public type KeyType<K> = {
