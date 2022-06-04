@@ -31,38 +31,59 @@ module {
     };
 
     public func insert<T>(tree : Tree<T>, key : [Char], value : T) : ?T {
-        return _insert(tree.root, 0, key, value);
+        return _insert(tree, tree.root, 0, key, value);
     };
 
-    private func _insert<T>(current : Node<T>, index : Nat, key : [Char], value : T) : ?T {
-        if (index == key.size()) return switch (current.leaf) {
-            case (? leaf) {
-                // Replace the old leaf value.
-                let old = leaf.value;
-                leaf.value := value;
-                ?old;
+    private func _insert<T>(tree : Tree<T>, current : Node<T>, index : Nat, key : [Char], value : T) : ?T {
+        if (index == key.size()) {
+            let old = Node.addLeaf(current, key, value);
+            switch (old) {
+                case (null) tree.size += 1;
+                case (? _) {}
             };
-            case (null) {
-                // No leaf present.
-                current.leaf := ?{
-                    key;
-                    var value = value;
-                };
-                null;
-            };
+            return old;
         };
         let k = key[index];
         switch (Node.getEdge(current, k)) {
-            case (_, ? edge) return _insert(edge, index + 1, key, value);
+            case (_, ? edge) return _insert(tree, edge, index + 1, key, value);
             case (_) {};
         };
-        let node : Node<T> = {
-            var edges  = [];
-            var leaf   = null;
-            var prefix = Array.slice(key, index, null);
+        switch (current.leaf) {
+            case (? leaf) {
+                if (key.size() < leaf.key.size()) {
+                    let oldPrefix = current.prefix;
+                    current.prefix := key;
+                    current.leaf := ?{
+                        key;
+                        var value = value;
+                    };
+                    Node.addEdge<T>(current, {
+                        key = k;
+                        var node = {
+                            var edges  = [];
+                            var leaf   = ?leaf;
+                            var prefix = Array.slice(oldPrefix, index, null);
+                        };
+                    });
+                    tree.size += 1;
+                    return null;
+                };
+            };
+            case (null) { /* ignore */};
         };
-        Node.addEdge<T>(current, { key = k; var node = node });
-        _insert(node, index + 1, key, value);
+        Node.addEdge<T>(current, {
+            key = k; 
+            var node = {
+                var edges  = [];
+                var leaf   = ?{
+                    key;
+                    var value = value;
+                };
+                var prefix = Array.slice(key, index, null);
+            };
+        });
+        tree.size += 1;
+        null;
     };
 
     public func delete<T>(tree : Tree<T>, key : [Char]) : ?T {
@@ -71,17 +92,18 @@ module {
             case (? leaf) {
                 let old = leaf.value;
                 current.leaf := null;
+                tree.size -= 1;
                 ?old;
             };
             case (null) null;
         };
         switch (Node.getEdge(current, key[0])) {
-            case (i, ? edge) _delete(current, i, edge, 1, key);
+            case (i, ? edge) _delete(tree, current, i, edge, 1, key);
             case (_) null;
         };
     };
 
-    private func _delete<T>(parent : Node<T>, edgeIndex : Nat, current : Node<T>, index : Nat, key : [Char]) : ?T {
+    private func _delete<T>(tree : Tree<T>, parent : Node<T>, edgeIndex : Nat, current : Node<T>, index : Nat, key : [Char]) : ?T {
         if (index == key.size()) {
             return switch (current.leaf) {
                 case (? leaf) {
@@ -102,13 +124,14 @@ module {
                     } else {
                         current.leaf := null;
                     };
+                    tree.size -= 1;
                     ?old;
                 };
                 case (null) null;
             };
         };
         switch (Node.getEdge(current, key[index])) {
-            case (i, ? edge) _delete(current, i, edge, index + 1, key);
+            case (i, ? edge) _delete(tree, current, i, edge, index + 1, key);
             case (_) null;
         };
     };
@@ -118,9 +141,11 @@ module {
     };
 
     private func _get<T>(current : Node<T>, index : Nat, key : [Char]) : ?T {
-        if (index == key.size()) return switch (current.leaf) {
-            case (? leaf) ?leaf.value;
-            case (null)   null;
+        switch (current.leaf) {
+            case (? leaf) {
+                if (index == key.size() or leaf.key == key) return ?leaf.value;
+            };
+            case (null) {};
         };
         switch (Node.getEdge(current, key[index])) {
             case (_, ? edge) _get(edge, index + 1, key);
@@ -191,6 +216,45 @@ module {
                     xI - yI;
                 }
             );
+        };
+
+        public func addLeaf<T>(node : Node<T>, key : [Char], value : T) : ?T {
+            switch (node.leaf) {
+                case (? leaf) {
+                    // Replace the old leaf value.
+                    if (leaf.key == key) {
+                        let old = leaf.value;
+                        leaf.value := value;
+                        return ?old;
+                    };
+                    let old : LeafNode<T> = {
+                        key = leaf.key;
+                        var value = leaf.value;
+                    };
+                    node.prefix := key;
+                    node.leaf := ?{
+                        key;
+                        var value = value;
+                    };
+                    Node.addEdge<T>(node, {
+                        key = old.key[0];
+                        var node = {
+                            var edges  = [];
+                            var leaf   = ?old;
+                            var prefix = old.key;
+                        };
+                    });
+                    null;
+                };
+                case (null) {
+                    // No leaf present.
+                    node.leaf := ?{
+                        key;
+                        var value = value;
+                    };
+                    null;
+                };
+            };
         };
     };
 

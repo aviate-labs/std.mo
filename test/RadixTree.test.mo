@@ -99,12 +99,46 @@ suite.run([
                 (['a', 'b'], 12),
             ];
         }),
+        it("insert \"a..f\" = 99", func (s : State) : Bool {
+            let v = Radix.insert<Nat>(s.tree, Text.toArray("abcdef"), 99);
+            if (v != null) return false;
+            Radix.toArray(s.tree) == [
+                (['_'], 0),
+                (['a', 'b'], 12),
+                (['a', 'b', 'c', 'd', 'e', 'f'], 99),
+            ];
+        }),
+        it("to text", func (s : State) : Bool {
+            let toText = func (n : Nat) : Text { debug_show(n) };
+            Radix.Tree.toText(s.tree, toText) == "[size:3] [_ (_) _:0, a (a)  [b (b) ab:12 [c (cdef) abcdef:99]]]";
+        }),
+        it("insert \"abc\" = 99", func (s : State) : Bool {
+            let v = Radix.insert<Nat>(s.tree, Text.toArray("abc"), 123);
+            if (v != null) return false;
+            Radix.toArray(s.tree) == [
+                (['_'], 0),
+                (['a', 'b'], 12),
+                (['a', 'b', 'c'], 123),
+                (['a', 'b', 'c', 'd', 'e', 'f'], 99),
+            ];
+        }),
         it("delete \"ab\"", func (s : State) : Bool {
             let v = Radix.delete<Nat>(s.tree, Text.toArray("ab"));
             if (v != ?12) return false;
             Radix.toArray(s.tree) == [
                 (['_'], 0),
+                (['a', 'b', 'c'], 123),
+                (['a', 'b', 'c', 'd', 'e', 'f'], 99),
             ];
         }),
+        it("get long key", func (_ : State) : Bool {
+            let t = Radix.new<Nat>();
+            ignore Radix.insert<Nat>(t, Text.toArray("abcdef"), 0);
+            ignore Radix.insert<Nat>(t, Text.toArray("abc"), 1);
+            ignore Radix.insert<Nat>(t, Text.toArray("abcdefghijklmnopqrstuvwxyz"), 2);
+            if (Radix.get<Nat>(t, Text.toArray("abcdef")) != ?0) return false;
+            if (Radix.get<Nat>(t, Text.toArray("abc")) != ?1) return false;
+            Radix.get<Nat>(t, Text.toArray("abcdefghijklmnopqrstuvwxyz")) == ?2;
+        })
     ])
 ]);
