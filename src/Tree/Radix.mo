@@ -35,22 +35,20 @@ module {
     };
 
     private func _insert<T>(current : Node<T>, index : Nat, key : [Char], value : T) : ?T {
-        if (index == key.size()) {
-            return switch (current.leaf) {
-                case (? leaf) {
-                    // Replace the old leaf value.
-                    let old = leaf.value;
-                    leaf.value := value;
-                    ?old;
+        if (index == key.size()) return switch (current.leaf) {
+            case (? leaf) {
+                // Replace the old leaf value.
+                let old = leaf.value;
+                leaf.value := value;
+                ?old;
+            };
+            case (null) {
+                // No leaf present.
+                current.leaf := ?{
+                    key;
+                    var value = value;
                 };
-                case (null) {
-                    // No leaf present.
-                    current.leaf := ?{
-                        key;
-                        var value = value;
-                    };
-                    null;
-                };
+                null;
             };
         };
         let k = key[index];
@@ -69,15 +67,13 @@ module {
 
     public func delete<T>(tree : Tree<T>, key : [Char]) : ?T {
         let current = tree.root;
-        if (key.size() == 0) {
-            return switch (current.leaf) {
-                case (? leaf) {
-                    let old = leaf.value;
-                    current.leaf := null;
-                    ?old;
-                };
-                case (null) null;
+        if (key.size() == 0) return switch (current.leaf) {
+            case (? leaf) {
+                let old = leaf.value;
+                current.leaf := null;
+                ?old;
             };
+            case (null) null;
         };
         switch (Node.getEdge(current, key[0])) {
             case (i, ? edge) _delete(current, i, edge, 1, key);
@@ -113,6 +109,21 @@ module {
         };
         switch (Node.getEdge(current, key[index])) {
             case (i, ? edge) _delete(current, i, edge, index + 1, key);
+            case (_) null;
+        };
+    };
+
+    public func get<T>(tree : Tree<T>, key : [Char]) : ?T {
+        _get(tree.root, 0, key);
+    };
+
+    private func _get<T>(current : Node<T>, index : Nat, key : [Char]) : ?T {
+        if (index == key.size()) return switch (current.leaf) {
+            case (? leaf) ?leaf.value;
+            case (null)   null;
+        };
+        switch (Node.getEdge(current, key[index])) {
+            case (_, ? edge) _get(edge, index + 1, key);
             case (_) null;
         };
     };

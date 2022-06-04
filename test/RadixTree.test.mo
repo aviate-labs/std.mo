@@ -47,6 +47,10 @@ suite.run([
                 (['a', 'b'], 12),
             ];
         }),
+        it("get \"ab\"", func (s : State) : Bool {
+            let v = Radix.get<Nat>(s.tree, Text.toArray("ab"));
+            v == ?12;
+        }),
         it("insert \"b\" = 2", func (s : State) : Bool {
             let v = Radix.insert<Nat>(s.tree, Text.toArray("b"), 2);
             if (v != null) return false;
