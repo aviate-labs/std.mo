@@ -1,4 +1,7 @@
 module {
+    // < 0: x <  y
+    // = 0: x == y
+    // > 0: x >  y
     public type Cf<T> = (x : T, y : T) -> Int;
     public type Eq<T> = (x : T, y : T) -> Bool;
 
