@@ -1,0 +1,6 @@
+#!/bin/bash
+
+for i in `find test -name "*.mo" -type f`; do
+    echo "$i "
+    $(vessel bin)/moc --check $(vessel sources 2> /dev/null) "$i"
+done

@@ -1,6 +1,8 @@
 import Prim "mo:⛔";
 
 import Array "../Array";
+import Char "../Char";
+import Compare "../Compare";
 import Stack "../Stack";
 import Search "../Search";
 import Sort "../Sort";
@@ -209,11 +211,9 @@ module {
         /// Adds the given edge to the given node's edges.
         public func addEdge<T>(node : Node<T>, edge : EdgeNode<T>) {
             node.edges := Sort.insert(
-                node.edges, edge, 
-                func(x : EdgeNode<T>, y : EdgeNode<T>) : Int {
-                    let xI : Int = Prim.nat32ToNat(Prim.charToNat32(x.key));
-                    let yI : Int = Prim.nat32ToNat(Prim.charToNat32(y.key));
-                    xI - yI;
+                node.edges, edge,
+                func(x : EdgeNode<T>, y : EdgeNode<T>) : Compare.Order {
+                    Char.cf(x.key, y.key);
                 }
             );
         };

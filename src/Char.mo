@@ -1,4 +1,5 @@
 import Prim "mo:⛔";
+import Compare "Compare";
 
 module Char {
     public let toText : (c : Char) -> Text = Prim.charToText;
@@ -13,8 +14,11 @@ module Char {
         Prim.intToNat8Wrap(toNat(c));
     };
 
-    public func isDigit(c : Char) : Bool {
-        let n = toNat32(c);
-        toNat32('0') <= n and n <= toNat32('9');
+    public func isDigit(c : Char) : Bool = '0' <= c and c <= '9';
+
+    public func cf(x : Char, y : Char) : Compare.Order {
+        if (x < y) return #less;
+        if (y < x) return #greater;
+        #equal;
     };
 };

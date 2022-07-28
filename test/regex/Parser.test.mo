@@ -3,6 +3,7 @@ import { describe; it; Suite } = "mo:testing/Suite";
 import Prim "mo:⛔";
 
 import AST "../../src/regex/AST";
+import Compare "../../src/Compare";
 import Parser "../../src/regex/Parser";
 
 let suite = Suite();
@@ -11,14 +12,14 @@ module Check = {
     public func flags(r : Parser.Result<AST.Flags>, expected : AST.Flags) : Bool {
         switch (r) {
             case (#err(_)) false;
-            case (#ok(flags)) AST.Flags.cf(flags, expected) == 0;
+            case (#ok(flags)) Compare.eq(flags, expected, AST.Flags.cf);
         };
     };
 
     public func flagsErr(r : Parser.Result<AST.Flags>, err : AST.Error) : Bool {
         switch (r) {
             case (#ok(_))  false;
-            case (#err(e)) AST.Error.cf(e, err) == 0;
+            case (#err(e)) Compare.eq(e, err, AST.Error.cf);
         };
     };
 
@@ -28,7 +29,7 @@ module Check = {
             case (#ok(e)) {
                 switch (e) {
                     case (#right(_)) false;
-                    case (#left(sf)) AST.SetFlags.cf(sf, flags) == 0;
+                    case (#left(sf)) Compare.eq(sf, flags, AST.SetFlags.cf);
                 };
             };
         };
@@ -37,14 +38,14 @@ module Check = {
     public func captureName(r : Parser.Result<AST.CaptureName>, cn : AST.CaptureName) : Bool {
         switch (r) {
             case (#err(_)) false;
-            case (#ok(n))  AST.CaptureName.cf(n, cn) == 0;
+            case (#ok(n))  Compare.eq(n, cn, AST.CaptureName.cf);
         };
     };
 
     public func captureNameErr(r : Parser.Result<AST.CaptureName>, err : AST.Error) : Bool {
         switch (r) {
             case (#ok(_))  false;
-            case (#err(e)) AST.Error.cf(e, err) == 0;
+            case (#err(e)) Compare.eq(e, err, AST.Error.cf);
         };
     };
 
@@ -54,9 +55,7 @@ module Check = {
             case (#ok(e)) {
                 switch (e) {
                     case (#left(_))  false;
-                    case (#right(g)) {
-                        AST.Group.cf(g, group) == 0;
-                    }
+                    case (#right(g)) Compare.eq(g, group, AST.Group.cf);
                 };
             };
         };
@@ -68,8 +67,8 @@ module Check = {
                 Prim.debugPrint(debug_show("ERR", e));
                 false;
             };
-            case (#ok(e))  switch (AST.AST.cf(e, ast)) {
-                case (0) true;
+            case (#ok(e)) switch (AST.AST.cf(e, ast)) {
+                case (#equal) true;
                 case (_) {
                     Prim.debugPrint(debug_show("A", e));
                     Prim.debugPrint(debug_show("E", ast));
@@ -82,7 +81,7 @@ module Check = {
     public func astErr(r : Parser.Result<AST.AST>, err : AST.Error) : Bool {
         switch (r) {
             case (#ok(_))  false;
-            case (#err(e)) AST.Error.cf(e, err) == 0;
+            case (#err(e)) Compare.eq(e, err, AST.Error.cf);
         };
     };
 };

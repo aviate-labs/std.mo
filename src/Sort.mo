@@ -10,7 +10,7 @@ module {
         Array_tabulate<T>(s + 1, func (i : Nat) : T {
             if (not inserted) {
                 if (i == s) return x;
-                if (0 < cf(xs[i], x)) {
+                if (Compare.gt(xs[i], x, cf)) {
                     inserted := true;
                     return x;
                 };

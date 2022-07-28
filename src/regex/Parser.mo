@@ -3,6 +3,7 @@ import Prim "mo:⛔";
 import AST "AST";
 import Array "../Array";
 import Char "../Char";
+import Compare "../Compare";
 import Iterator "../Iterator";
 import { parseNat; Nat32 } = "../Nat";
 import Result "../Result";
@@ -117,8 +118,55 @@ module {
             let start = pos();
             if (not bump()) return #err(err(#EscapeUnexpectedEOF, { start; end = pos() }));
             let c = char();
+            if ('0' <= c and c <= '7') {
+                // TODO: support octal
+                // if !octal
+                return #err(err(#UnsupportedBackReference, { start; end = spanChar().end }));
+            };
+            if (c == '8' or c == '9') {
+                // if !octal
+                return #err(err(#UnsupportedBackReference, { start; end = spanChar().end }));
+            };
+            if (c == 'x' or c == 'u' or c == 'U') return switch (parseHex()) {
+                case (#err(e))  #err(e);
+                case (#ok(lit)) #ok(#Literal(lit));
+            };
             // TODO: octal, unicode, etc...
             return #err(err(#UnsupportedBackReference, { start; end = spanChar().end }));
+        };
+
+        private func isHex(c : Char) : Bool = ('0' <= c and c <= '9') or ('a' <= c and c <= 'f') or ('A' <= c and c <= 'F');
+
+        public func parseHex() : Result<AST.Literal> {
+            let c = char();
+            assert(c == 'x' or c == 'u' or c == 'U');
+            let kind = switch (c) {
+                case ('x') #X;
+                case ('u') #UnicodeShort;
+                case (_)   #UnicodeLong;
+            };
+            if (not bumpBumpSpace()) return #err(err(#EscapeUnexpectedEOF, span()));
+            if (char() == '{') return parseHexBrace(kind);
+            parseHexDigit(kind);
+        };
+
+        public func parseHexBrace(kind : AST.HexLiteralKind) : Result<AST.Literal> {
+            #err(err(#EscapeUnexpectedEOF, span()));
+        };
+
+        public func parseHexDigit(kind : AST.HexLiteralKind) : Result<AST.Literal> {
+            let start = pos();
+            var tmp = "";
+            for (i in Iterator.range(0, AST.HexLiteralKind.digits(kind) - 1)) {
+                if (0 < i and not bumpBumpSpace()) return #err(err(#EscapeUnexpectedEOF, span()));
+                let c = char();
+                if (not isHex(c)) return #err(err(#EscapeHexInvalidDigit, spanChar()));
+                tmp #= Char.toText(c);
+            };
+            ignore bumpBumpSpace();
+            let end = pos();
+            // TODO: handle hex conversion?
+            return #err(err(#EscapeUnexpectedEOF, span()));
         };
 
         // @pre first character after '<'.
@@ -140,7 +188,7 @@ module {
             if (start.offset == end.offset) return #err(err(#GroupNameEmpty, { start; end }));
             var name = "";
             for (i in Iterator.range(start.offset, end.offset - 1)) {
-                name #= Prim.charToText(pattern[i]);
+                name #= Char.toText(pattern[i]);
             };
             let captureName : AST.CaptureName = {
                 span = { start; end };
@@ -297,7 +345,7 @@ module {
                         kind = #Negation;
                     };
                     for (i in Stack.values(items)) {
-                        if (AST.FlagsItemKind.cf(i.kind, item.kind) == 0) return #err(err(#FlagRepeatedNegation({
+                        if (Compare.eq(i.kind, item.kind, AST.FlagsItemKind.cf)) return #err(err(#FlagRepeatedNegation({
                             original = i.span;
                         }), spanChar()));
                     };
@@ -312,7 +360,7 @@ module {
                         });
                     };
                     for (i in Stack.values(items)) {
-                        if (AST.FlagsItemKind.cf(i.kind, item.kind) == 0) return #err(err(#FlagDuplicate({
+                        if (Compare.eq(i.kind, item.kind, AST.FlagsItemKind.cf)) return #err(err(#FlagDuplicate({
                             original = i.span;
                         }), spanChar()));
                     };
@@ -614,7 +662,7 @@ module {
                                 let c = char();
                                 ignore bump();
                                 if (c == '\n') break l;
-                                comment #= Prim.charToText(c);
+                                comment #= Char.toText(c);
                             };
                             Stack.push(comments, {
                                 span = {

@@ -20,8 +20,8 @@ module {
             var i = lo;
             var j = hi;
             loop {
-                while (cf(xs[i], pivot) < 0) i += 1;
-                while (cf(xs[j], pivot) > 0) j -= 1;
+                while (Compare.lt(xs[i], pivot, cf)) i += 1;
+                while (Compare.gt(xs[j], pivot, cf)) j -= 1;
                 if (j <= i) return j;
                 let x = xs[i]; // swap
                 xs[i] := xs[j];
