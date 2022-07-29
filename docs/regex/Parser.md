@@ -36,6 +36,21 @@
 
 
 
+### Function `parseHex`
+`func parseHex() : Result<AST.Literal>`
+
+
+
+### Function `parseHexBrace`
+`func parseHexBrace(kind : AST.HexLiteralKind) : Result<AST.Literal>`
+
+
+
+### Function `parseHexDigit`
+`func parseHexDigit(kind : AST.HexLiteralKind) : Result<AST.Literal>`
+
+
+
 ### Function `parseCaptureName`
 `func parseCaptureName(index : Nat32) : Result<AST.CaptureName>`
 
@@ -68,6 +83,16 @@
 
 ### Function `parseFlag`
 `func parseFlag() : Result<AST.Flag>`
+
+
+
+### Function `pushAlternation`
+`func pushAlternation(concat : AST.ConcatVar) : Result<AST.ConcatVar>`
+
+
+
+### Function `pushOrAddAlternation`
+`func pushOrAddAlternation(concat : AST.Concat)`
 
 
 

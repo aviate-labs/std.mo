@@ -5,6 +5,6 @@
 
 
 ## Function `sort`
-`func sort<T>(xs : [var T], cf : Compare.Cf<T>)`
+`func sort<T>(xs : [var T], cmp : Compare.Ord<T>)`
 
 Sorts the elements of an array in place.

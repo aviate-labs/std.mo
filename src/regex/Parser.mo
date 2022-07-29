@@ -345,7 +345,7 @@ module {
                         kind = #Negation;
                     };
                     for (i in Stack.values(items)) {
-                        if (Compare.eq(i.kind, item.kind, AST.FlagsItemKind.cf)) return #err(err(#FlagRepeatedNegation({
+                        if (Compare.Ordering.eq(AST.FlagsItemKind.cmp(i.kind, item.kind))) return #err(err(#FlagRepeatedNegation({
                             original = i.span;
                         }), spanChar()));
                     };
@@ -360,7 +360,7 @@ module {
                         });
                     };
                     for (i in Stack.values(items)) {
-                        if (Compare.eq(i.kind, item.kind, AST.FlagsItemKind.cf)) return #err(err(#FlagDuplicate({
+                        if (Compare.Ordering.eq(AST.FlagsItemKind.cmp(i.kind, item.kind))) return #err(err(#FlagDuplicate({
                             original = i.span;
                         }), spanChar()));
                     };

@@ -12,14 +12,14 @@ module Check = {
     public func flags(r : Parser.Result<AST.Flags>, expected : AST.Flags) : Bool {
         switch (r) {
             case (#err(_)) false;
-            case (#ok(flags)) Compare.eq(flags, expected, AST.Flags.cf);
+            case (#ok(flags)) Compare.Ordering.eq(AST.Flags.cmp(flags, expected));
         };
     };
 
     public func flagsErr(r : Parser.Result<AST.Flags>, err : AST.Error) : Bool {
         switch (r) {
             case (#ok(_))  false;
-            case (#err(e)) Compare.eq(e, err, AST.Error.cf);
+            case (#err(e)) AST.Error.eq(e, err);
         };
     };
 
@@ -29,7 +29,7 @@ module Check = {
             case (#ok(e)) {
                 switch (e) {
                     case (#right(_)) false;
-                    case (#left(sf)) Compare.eq(sf, flags, AST.SetFlags.cf);
+                    case (#left(sf)) Compare.Ordering.eq(AST.SetFlags.cmp(sf, flags));
                 };
             };
         };
@@ -38,14 +38,14 @@ module Check = {
     public func captureName(r : Parser.Result<AST.CaptureName>, cn : AST.CaptureName) : Bool {
         switch (r) {
             case (#err(_)) false;
-            case (#ok(n))  Compare.eq(n, cn, AST.CaptureName.cf);
+            case (#ok(n))  Compare.Ordering.eq(AST.CaptureName.cmp(n, cn));
         };
     };
 
     public func captureNameErr(r : Parser.Result<AST.CaptureName>, err : AST.Error) : Bool {
         switch (r) {
             case (#ok(_))  false;
-            case (#err(e)) Compare.eq(e, err, AST.Error.cf);
+            case (#err(e)) AST.Error.eq(e, err);
         };
     };
 
@@ -55,7 +55,7 @@ module Check = {
             case (#ok(e)) {
                 switch (e) {
                     case (#left(_))  false;
-                    case (#right(g)) Compare.eq(g, group, AST.Group.cf);
+                    case (#right(g)) Compare.Ordering.eq(AST.Group.cmp(g, group));
                 };
             };
         };
@@ -67,7 +67,7 @@ module Check = {
                 Prim.debugPrint(debug_show("ERR", e));
                 false;
             };
-            case (#ok(e)) switch (AST.AST.cf(e, ast)) {
+            case (#ok(e)) switch (AST.AST.cmp(e, ast)) {
                 case (#equal) true;
                 case (_) {
                     Prim.debugPrint(debug_show("A", e));
@@ -81,7 +81,7 @@ module Check = {
     public func astErr(r : Parser.Result<AST.AST>, err : AST.Error) : Bool {
         switch (r) {
             case (#ok(_))  false;
-            case (#err(e)) Compare.eq(e, err, AST.Error.cf);
+            case (#err(e)) AST.Error.eq(e, err);
         };
     };
 };

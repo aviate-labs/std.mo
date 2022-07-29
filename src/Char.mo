@@ -15,10 +15,4 @@ module Char {
     };
 
     public func isDigit(c : Char) : Bool = '0' <= c and c <= '9';
-
-    public func cf(x : Char, y : Char) : Compare.Order {
-        if (x < y) return #less;
-        if (y < x) return #greater;
-        #equal;
-    };
 };

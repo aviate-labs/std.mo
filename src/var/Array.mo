@@ -9,7 +9,7 @@ module {
     };
 
     /// Sorts the elements of an array in place.
-    public func sort<T>(xs : [var T], cf : Compare.Cf<T>) {
+    public func sort<T>(xs : [var T], cmp : Compare.Ord<T>) {
         // In-place quicksort w/ the Hoare partition scheme.
 
         let size = xs.size();
@@ -20,8 +20,8 @@ module {
             var i = lo;
             var j = hi;
             loop {
-                while (Compare.lt(xs[i], pivot, cf)) i += 1;
-                while (Compare.gt(xs[j], pivot, cf)) j -= 1;
+                while (Compare.lt(xs[i], pivot, cmp)) i += 1;
+                while (Compare.gt(xs[j], pivot, cmp)) j -= 1;
                 if (j <= i) return j;
                 let x = xs[i]; // swap
                 xs[i] := xs[j];

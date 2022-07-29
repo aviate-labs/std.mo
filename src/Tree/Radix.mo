@@ -212,8 +212,8 @@ module {
         public func addEdge<T>(node : Node<T>, edge : EdgeNode<T>) {
             node.edges := Sort.insert(
                 node.edges, edge,
-                func(x : EdgeNode<T>, y : EdgeNode<T>) : Compare.Order {
-                    Char.cf(x.key, y.key);
+                func(x : EdgeNode<T>, y : EdgeNode<T>) : Compare.Ordering {
+                    Compare.Char.cmp(x.key, y.key);
                 }
             );
         };

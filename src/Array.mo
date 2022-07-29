@@ -174,9 +174,9 @@ module {
     };
 
     /// Returns a new sorted array based on the elements of the given array.
-    public func sort<T>(xs : [T], cf : Compare.Cf<T>) : [T] {
+    public func sort<T>(xs : [T], cmp : Compare.Ord<T>) : [T] {
         let ys = toVar<T>(xs);
-        v.sort(ys, cf);
+        v.sort(ys, cmp);
         fromVar(ys);
     };
 

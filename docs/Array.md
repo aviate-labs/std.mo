@@ -97,7 +97,7 @@ Extracts a section of the given array and returns a new array.
 Returns true if at least one element in the given array satisfies the provided testing function.
 
 ## Function `sort`
-`func sort<T>(xs : [T], cf : Compare.Cf<T>) : [T]`
+`func sort<T>(xs : [T], cmp : Compare.Ord<T>) : [T]`
 
 Returns a new sorted array based on the elements of the given array.
 

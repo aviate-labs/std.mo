@@ -3,7 +3,7 @@ import { describe; it; Suite } = "mo:testing/Suite";
 import Prim "mo:⛔";
 
 import Array "mo:std/Array";
-import Nat "mo:std/Nat";
+import { Nat } = "mo:std/Compare";
 
 let suite = Suite();
 
@@ -122,7 +122,7 @@ suite.run([
 
         it("sort", func () : Bool {
             let array = [4, 2, 5, 1, 3];
-            Array.sort(array, Nat.cf) == [1, 2, 3, 4, 5];
+            Array.sort(array, Nat.cmp) == [1, 2, 3, 4, 5];
         })
     ])
 ]);

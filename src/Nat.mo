@@ -5,12 +5,6 @@ import Compare "Compare";
 import Result "Result";
 
 module Nat {
-    public func cf(x : Nat, y : Nat) : Compare.Order {
-        if (x < y) return #less;
-        if (y < x) return #greater;
-        #equal;
-    };
-
     public func parseNat(t : Text) : Result.Result<Nat, Text> {
         var n = 0;
         label l for (c in t.chars()) {
@@ -24,11 +18,5 @@ module Nat {
 
     public module Nat32 = {
         public let fromNat : (n : Nat) -> Nat32 = Prim.intToNat32Wrap;
-
-        public func cf(x : Nat32, y : Nat32) : Compare.Order {
-            if (x < y) return #less;
-            if (y < x) return #greater;
-            #equal;
-        };
     };
 };

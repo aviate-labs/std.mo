@@ -31,6 +31,12 @@ Adds the given value 'x' to the stack.
 ## Function `pop`
 `func pop<T>(b : Stack<T>) : ?T`
 
+Removes the last value from the stack and returns it.
+
+## Function `last`
+`func last<T>(b : Stack<T>) : ?T`
+
+Returns the last value from the stack without removing it.
 
 ## Function `toArray`
 `func toArray<T>(b : Stack<T>) : [T]`

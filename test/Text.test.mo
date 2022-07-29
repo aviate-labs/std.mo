@@ -2,8 +2,7 @@ import { describe; it; Suite } = "mo:testing/Suite";
 
 import Prim "mo:⛔";
 
-import Compare "mo:std/Compare";
-import Text "mo:std/Text";
+import { lt; gt; Text } = "mo:std/Compare";
 
 let suite = Suite();
 
@@ -11,16 +10,16 @@ suite.run([
     describe("Text", [
         describe("cf", [
             it("a < b", func () : Bool {
-                Compare.lt("a", "b", Text.cf);
+                lt("a", "b", Text.cmp);
             }),
             it("aa > b", func () : Bool {
-                Compare.gt("aa", "b", Text.cf);
+                gt("aa", "b", Text.cmp);
             }),
             it("abc > aba", func () : Bool {
-                Compare.gt("abc", "aba", Text.cf);
+                gt("abc", "aba", Text.cmp);
             }),
             it("caa > aaa", func () : Bool {
-                Compare.gt("caa", "aaa", Text.cf);
+                gt("caa", "aaa", Text.cmp);
             }),
         ])
     ])

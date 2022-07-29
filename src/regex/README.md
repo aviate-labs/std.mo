@@ -1,6 +1,6 @@
 # Regex Module
 
-❌ WIP, non-functioning
+❌ WIP, non-functioning!
 
 This module is based on the [`regex` Rust library](https://docs.rs/regex).
 
