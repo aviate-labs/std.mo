@@ -16,6 +16,10 @@ module Nat {
         #ok(n);
     };
 
+    public module Nat8 = {
+        public let toNat : (n : Nat8) -> Nat = Prim.nat8ToNat;
+    };
+
     public module Nat32 = {
         public let fromNat : (n : Nat) -> Nat32 = Prim.intToNat32Wrap;
     };
