@@ -1,5 +1,7 @@
 # Regex Module
 
+❌ WIP, non-functioning
+
 This module is based on the [`regex` Rust library](https://docs.rs/regex).
 
 - [GitHub](https://github.com/rust-lang/regex)

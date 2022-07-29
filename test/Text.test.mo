@@ -2,8 +2,8 @@ import { describe; it; Suite } = "mo:testing/Suite";
 
 import Prim "mo:⛔";
 
-import Compare "../src/Compare";
-import Text "../src/Text";
+import Compare "mo:std/Compare";
+import Text "mo:std/Text";
 
 let suite = Suite();
 

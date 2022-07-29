@@ -2,8 +2,8 @@ import { describe; it; Suite } = "mo:testing/SuiteState";
 
 import Prim "mo:⛔";
 
-import Map "../src/Map";
-import Iterator "../src/Iterator";
+import Map "mo:std/Map";
+import Iterator "mo:std/Iterator";
 
 type State = {
     map : Map.Map<Nat, Text>;

@@ -2,5 +2,5 @@
 
 for i in `find test -name "*.test.mo" -type f` ; do
     echo "$i"
-    $(vessel bin)/moc -r $(vessel sources 2> /dev/null) "$i"
+    $(vessel bin)/moc -r $(vessel sources 2> /dev/null) --package std src "$i"
 done

@@ -2,9 +2,9 @@ import { describe; it; Suite } = "mo:testing/SuiteState";
 
 import Prim "mo:⛔";
 
-import Map "../src/Map";
-import Set "../src/Set";
-import Iterator "../src/Iterator";
+import Map "mo:std/Map";
+import Set "mo:std/Set";
+import Iterator "mo:std/Iterator";
 
 type State = {
     set : Set.Set<Nat>;

@@ -2,8 +2,8 @@ import { describe; it; itp; Suite } = "mo:testing/SuiteState";
 
 import Prim "mo:⛔";
 
-import Radix "../src/Tree/Radix";
-import Text "../src/Text";
+import Radix "../../src/Tree/Radix";
+import Text "../../src/Text";
 
 type State = {
     tree : Radix.Tree<Nat>;

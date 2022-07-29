@@ -2,7 +2,7 @@ import { describe; it; Suite } = "mo:testing/Suite";
 
 import Prim "mo:⛔";
 
-import Nat "../src/Nat";
+import Nat "mo:std/Nat";
 
 let suite = Suite();
 

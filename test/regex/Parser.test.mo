@@ -2,9 +2,9 @@ import { describe; it; Suite } = "mo:testing/Suite";
 
 import Prim "mo:⛔";
 
-import AST "../../src/regex/AST";
-import Compare "../../src/Compare";
-import Parser "../../src/regex/Parser";
+import AST "mo:std/regex/AST";
+import Compare "mo:std/Compare";
+import Parser "mo:std/regex/Parser";
 
 let suite = Suite();
 

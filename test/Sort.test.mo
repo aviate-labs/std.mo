@@ -2,8 +2,8 @@ import { describe; it; Suite } = "mo:testing/Suite";
 
 import Prim "mo:⛔";
 
-import Nat "../src/Nat";
-import Sort "../src/Sort";
+import Nat "mo:std/Nat";
+import Sort "mo:std/Sort";
 
 let suite = Suite();
 
