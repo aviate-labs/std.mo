@@ -4,6 +4,8 @@ import AST "AST";
 import Array "../Array";
 import Char "../Char";
 import Compare "../Compare";
+import { Nat32 = HNat32 } = "../encoding/Hex";
+import { Nat32 = ONat32 } = "../encoding/Octal";
 import Iterator "../Iterator";
 import { parseNat; Nat32 } = "../Nat";
 import Result "../Result";
@@ -57,6 +59,9 @@ module {
         let names    = Stack.init<AST.CaptureName>(16);
         let groups   = Stack.init<GroupState>(16);
         var index    = 1 : Nat32;
+        var octal    = false;
+
+        public func toggleOctal(toggle : Bool) { octal := toggle };
 
         public func err(kind : AST.ErrorKind, span : AST.Span) : AST.Error = {
             kind;
@@ -119,13 +124,18 @@ module {
             if (not bump()) return #err(err(#EscapeUnexpectedEOF, { start; end = pos() }));
             let c = char();
             if ('0' <= c and c <= '7') {
-                // TODO: support octal
-                // if !octal
-                return #err(err(#UnsupportedBackReference, { start; end = spanChar().end }));
+                if (not octal) return #err(err(#UnsupportedBackReference, { start; end = spanChar().end }));
+                return switch (parseOctal()) {
+                    case (#err(e)) #err(e);
+                    case (#ok(lit)) #ok(#Literal({
+                        span = { start; end = lit.span.end };
+                        kind = lit.kind;
+                        c = lit.c;
+                    }));
+                };
             };
             if (c == '8' or c == '9') {
-                // if !octal
-                return #err(err(#UnsupportedBackReference, { start; end = spanChar().end }));
+                if (not octal) return #err(err(#UnsupportedBackReference, { start; end = spanChar().end }));
             };
             if (c == 'x' or c == 'u' or c == 'U') return switch (parseHex()) {
                 case (#err(e))  #err(e);
@@ -133,6 +143,29 @@ module {
             };
             // TODO: octal, unicode, etc...
             return #err(err(#UnsupportedBackReference, { start; end = spanChar().end }));
+        };
+
+        public func parseOctal() : Result<AST.Literal> {
+            let c = char();
+            assert('0' <= c and c <= '7');
+            let start = pos();
+            var tmp = Char.toText(c);
+            label l loop {
+                if (not bump()) break l;
+                let c = char();
+                let { offset } = pos();
+                if (c < '0' or '7' < c or 2 < (offset - start.offset : Nat)) break l;
+                tmp #= Char.toText(c);
+            };
+            let end = pos();
+            switch (ONat32.oct(tmp)) {
+                case (#err(_)) #err(err(#EscapeHexInvalid, { start; end }));
+                case (#ok(n)) #ok({
+                    span = { start; end };
+                    kind = #Octal;
+                    c = Char.fromNat32(n);
+                });
+            };
         };
 
         private func isHex(c : Char) : Bool = ('0' <= c and c <= '9') or ('a' <= c and c <= 'f') or ('A' <= c and c <= 'F');
@@ -151,6 +184,7 @@ module {
         };
 
         public func parseHexBrace(kind : AST.HexLiteralKind) : Result<AST.Literal> {
+            // TODO
             #err(err(#EscapeUnexpectedEOF, span()));
         };
 
@@ -165,8 +199,14 @@ module {
             };
             ignore bumpBumpSpace();
             let end = pos();
-            // TODO: handle hex conversion?
-            return #err(err(#EscapeUnexpectedEOF, span()));
+            switch (HNat32.hex(tmp)) {
+                case (#err(_)) #err(err(#EscapeHexInvalid, { start; end }));
+                case (#ok(n)) #ok({
+                    span = { start; end };
+                    kind = #HexFixed(kind);
+                    c = Char.fromNat32(n);
+                });
+            };
         };
 
         // @pre first character after '<'.

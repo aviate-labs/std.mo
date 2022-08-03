@@ -154,6 +154,19 @@ suite.run([
                 Check.flagsErr(p.parseFlags(), AST.Error.new(#FlagDanglingNegation, span(0, 1)));
             })
         ]),
+        describe("Octal", [
+            it("777", func () : Bool {
+                let p = Parser.Parser("\\777");
+                p.toggleOctal(true);
+                switch (p.parseEscape()) {
+                    case (#err(_)) false;
+                    case (#ok(lit)) {
+                        Prim.debugPrint(debug_show(lit));
+                        true;
+                    };
+                };
+            }),
+        ]),
         describe("CaptureName", [
             it("abc>", func () : Bool {
                 let p = Parser.Parser("abc>");

@@ -141,10 +141,9 @@ module {
         #UnsupportedLookAround;
 
         #EscapeHexInvalidDigit;
+        #EscapeHexInvalid;
 
         #DecimalEmpty;
-
-        #TODO
     };
 
     public module ErrorKind = {

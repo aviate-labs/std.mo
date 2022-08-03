@@ -12,7 +12,7 @@ module {
     public type HexChar = Char;
 
     public module HexChar = {
-        private let hex  : [Char] = [
+        private let hex : [Char] = [
             '0', '1', '2', '3',
             '4', '5', '6', '7',
             '8', '9', 'a', 'b',
@@ -49,7 +49,10 @@ module {
     private type HexBytes = (HexByte, HexByte);
 
     private module HexBytes = {
-        public func fromDoubleHexByte(n : DoubleHexByte) : HexBytes = (n / base, n % base);
+        public func fromDoubleHexByte(n : DoubleHexByte) : HexBytes = (
+            n >> 4,
+            n & 0xF
+        );
     };
 
     // Converts `Nat8` (byte) to its corresponding hexadecimal format.

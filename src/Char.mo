@@ -4,7 +4,9 @@ import Compare "Compare";
 module Char {
     public let toText : (c : Char) -> Text = Prim.charToText;
 
-    public let toNat32 : (c : Char) -> Nat32 = Prim.charToNat32; 
+    public let toNat32 : (c : Char) -> Nat32 = Prim.charToNat32;
+
+    public let fromNat32 : (n : Nat32) -> Char = Prim.nat32ToChar;
 
     public func toNat(c : Char) : Nat {
         Prim.nat32ToNat(toNat32(c));
