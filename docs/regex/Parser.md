@@ -11,6 +11,11 @@
 ## `class Parser`
 
 
+### Function `toggleOctal`
+`func toggleOctal(toggle : Bool)`
+
+
+
 ### Function `err`
 `func err(kind : AST.ErrorKind, span : AST.Span) : AST.Error`
 
@@ -33,6 +38,11 @@
 
 ### Function `parseEscape`
 `func parseEscape() : Result<Primitive>`
+
+
+
+### Function `parseOctal`
+`func parseOctal() : Result<AST.Literal>`
 
 
 

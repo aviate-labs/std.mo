@@ -17,7 +17,7 @@
 
 
 ## Type `ErrorKind`
-`type ErrorKind = {#GroupNameEmpty; #GroupNameInvalid; #GroupNameDuplicate; #GroupNameUnexpectedEOF; #GroupUnclosed; #GroupUnopened; #EscapeUnexpectedEOF; #UnsupportedBackReference; #GroupsEmpty; #FlagUnrecognized; #FlagDanglingNegation; #FlagRepeatedNegation : { original : Span }; #FlagUnexpectedEOF; #FlagDuplicate : { original : Span }; #RepetitionMissing; #RepetitionCountUnclosed; #RepetitionCountInvalid; #UnsupportedLookAround; #EscapeHexInvalidDigit; #DecimalEmpty; #TODO}`
+`type ErrorKind = {#GroupNameEmpty; #GroupNameInvalid; #GroupNameDuplicate; #GroupNameUnexpectedEOF; #GroupUnclosed; #GroupUnopened; #EscapeUnexpectedEOF; #UnsupportedBackReference; #GroupsEmpty; #FlagUnrecognized; #FlagDanglingNegation; #FlagRepeatedNegation : { original : Span }; #FlagUnexpectedEOF; #FlagDuplicate : { original : Span }; #RepetitionMissing; #RepetitionCountUnclosed; #RepetitionCountInvalid; #UnsupportedLookAround; #EscapeHexInvalidDigit; #EscapeHexInvalid; #DecimalEmpty}`
 
 
 ## Value `ErrorKind`

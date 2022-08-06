@@ -8,6 +8,10 @@
 `let toNat32 : (c : Char) -> Nat32`
 
 
+## Value `fromNat32`
+`let fromNat32 : (n : Nat32) -> Char`
+
+
 ## Function `toNat`
 `func toNat(c : Char) : Nat`
 
