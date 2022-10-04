@@ -1,4 +1,4 @@
-import { time = now } = "mo:⛔";
+import { time = _now; nat64ToNat } = "mo:⛔";
 
 module {
     private let NANO_SEC  : Time =                      1;
@@ -13,7 +13,7 @@ module {
     public type Time = Nat;
 
     public module Time = {
-        public func now() : Time = Time.now();
+        public func now() : Time = nat64ToNat(_now());
     };
 
     public type Year = Nat;
