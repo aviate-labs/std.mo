@@ -1,5 +1,6 @@
 import Array "var/Array";
 import Compare "Compare";
+import Iter "Iter";
 import Iterator "Iterator";
 
 module {
@@ -92,12 +93,12 @@ module {
 
     /// Returns a new Iterator object that contains the keys for each element in the Map object.
     public func keys<K, V>(map : Map<K, V>) : Iterator.Iterator<K> {
-        Iterator.map(entries(map), func ((k, _) : (K, V)) : K { k });
+        Iter.map(entries(map), func ((k, _) : (K, V)) : K { k });
     };
 
     /// Returns a new Iterator object that contains the values for each element in the Map object.
     public func values<K, V>(map : Map<K, V>) : Iterator.Iterator<V> {
-        Iterator.map(entries(map), func ((_, v) : (K, V)) : V { v });
+        Iter.map(entries(map), func ((_, v) : (K, V)) : V { v });
     };
 
     /// Returns a new Iterator object that contains an tuple of (key, value) for each element in the Map object.

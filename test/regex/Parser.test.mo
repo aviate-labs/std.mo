@@ -161,7 +161,6 @@ suite.run([
                 switch (p.parseEscape()) {
                     case (#err(_)) false;
                     case (#ok(lit)) {
-                        Prim.debugPrint(debug_show(lit));
                         true;
                     };
                 };

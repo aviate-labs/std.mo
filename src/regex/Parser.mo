@@ -6,7 +6,7 @@ import Char "../Char";
 import Compare "../Compare";
 import { Nat32 = HNat32 } = "../encoding/Hex";
 import { Nat32 = ONat32 } = "../encoding/Octal";
-import Iterator "../Iterator";
+import Iter "../Iter";
 import { parseNat; Nat32 } = "../Nat";
 import Result "../Result";
 import Stack "../Stack";
@@ -191,7 +191,7 @@ module {
         public func parseHexDigit(kind : AST.HexLiteralKind) : Result<AST.Literal> {
             let start = pos();
             var tmp = "";
-            for (i in Iterator.range(0, AST.HexLiteralKind.digits(kind) - 1)) {
+            for (i in Iter.range(0, AST.HexLiteralKind.digits(kind) - 1)) {
                 if (0 < i and not bumpBumpSpace()) return #err(err(#EscapeUnexpectedEOF, span()));
                 let c = char();
                 if (not isHex(c)) return #err(err(#EscapeHexInvalidDigit, spanChar()));
@@ -227,7 +227,7 @@ module {
             ignore bump();
             if (start.offset == end.offset) return #err(err(#GroupNameEmpty, { start; end }));
             var name = "";
-            for (i in Iterator.range(start.offset, end.offset - 1)) {
+            for (i in Iter.range(start.offset, end.offset - 1)) {
                 name #= Char.toText(pattern[i]);
             };
             let captureName : AST.CaptureName = {

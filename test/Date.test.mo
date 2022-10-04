@@ -30,7 +30,6 @@ suite.run([
                 hour = 22; minute = 22; second = 22;
                 nano = 222222222;
             }) return false;
-            Prim.debugPrint(debug_show(Date.Date.toTime(date), time));
             Date.Date.toTime(date) == time;
         })
     ])

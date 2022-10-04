@@ -1,3 +1,4 @@
+import Iter "Iter";
 import Iterator "Iterator";
 import Map "Map";
 
@@ -29,6 +30,6 @@ module {
 
     /// Returns a new Iterator object that contains the values for each element in the Map object.
     public func values<V>(set : Set<V>) : Iterator.Iterator<V> {
-        Iterator.map(Map.entries(set), func ((v, _) : (V, ())) : V { v });
+        Iter.map(Map.entries(set), func ((v, _) : (V, ())) : V { v });
     };
 };

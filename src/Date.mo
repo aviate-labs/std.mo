@@ -13,7 +13,7 @@ module {
     public type Time = Nat;
 
     public module Time = {
-        public func now() : Time = now();
+        public func now() : Time = Time.now();
     };
 
     public type Year = Nat;

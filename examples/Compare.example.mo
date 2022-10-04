@@ -70,4 +70,3 @@ do { // EXAMPLE: Ordering.thenF
     );
     assert(Ordering.lt(r));
 };
-

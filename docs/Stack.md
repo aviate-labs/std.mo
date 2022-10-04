@@ -23,6 +23,10 @@ Makes a new stack based on the given array.
 
 Creates an empty stack with capacity 0.
 
+## Function `get`
+`func get<T>(b : Stack<T>, index : Nat) : ?T`
+
+
 ## Function `push`
 `func push<T>(b : Stack<T>, x : T)`
 
@@ -45,4 +49,8 @@ Extracts an array from the stack.
 
 ## Function `values`
 `func values<T>(b : Stack<T>) : Iterator.Iterator<T>`
+
+
+## Value `Autofill`
+`let Autofill`
 

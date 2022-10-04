@@ -45,6 +45,11 @@ module Stack {
         make([]);
     };
 
+    public func get<T>(b : Stack<T>, index : Nat) : ?T {
+        if (index >= b.size) return null;
+        ?b.xs[index];
+    };
+
     /// Adds the given value 'x' to the stack.
     public func push<T>(b : Stack<T>, x : T) {
         if (b.size == b.xs.size()) {
@@ -92,6 +97,35 @@ module Stack {
             let x = ?b.xs[n];
             n += 1;
             x;
+        };
+    };
+
+    public module Autofill = {
+        public type Stack<T> = Stack.Stack<T> and {
+            var index : Nat;
+            iter : Iterator.Iterator<T>;
+        };
+
+        public func init<T>(capacity : Nat, iter : Iterator.Iterator<T>) : Stack<T> {
+            return {
+                var capacity = capacity;
+                var size     = 0;
+                var xs       = [var];
+                var index    = 0;
+                iter;
+            };
+        };
+
+        public func get<T>(s : Stack<T>, index : Nat) : ?T {
+            if (index >= s.capacity) return null;
+
+            while (s.size <= index) switch (s.iter.next()) {
+                case (? v) {
+                    Stack.push(s, v);
+                };
+                case (_) return null;
+            };
+            Stack.get(s, index);
         };
     };
 };
